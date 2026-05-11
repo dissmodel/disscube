@@ -1,0 +1,28 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+outputs
+
+# Python Cache
+__pycache__/
+**/*.py[cod]
+**/*$py.class
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Project Specific
+disscube.egg-info/
+catalog.json
+test_catalog.json
+data/
+outputs/
+
+# Build and Distribution
+build/
+dist/
+*.egg-info/

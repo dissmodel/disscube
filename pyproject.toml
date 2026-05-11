@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "disscube"
+version = "0.2.0"
+description = "Declarative Spatial Layer for Dynamic Models"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Sergio" }
+]
+dependencies = [
+    "pydantic>=2.0",
+    "xarray",
+    "zarr",
+    "rasterio",
+    "geopandas",
+    "rasterstats",
+    "shapely",
+    "scipy",
+    "numpy",
+    "pandas",
+    "pyproj",
+    "fsspec",
+    "s3fs",
+    "typer",
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "toml",
+    "rioxarray",
+    "affine",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ipykernel",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["disscube*"]

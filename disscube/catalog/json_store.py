@@ -1,0 +1,86 @@
+import json
+from pathlib import Path
+from typing import List, Optional
+from disscube.models import GridSpec, DataSource, DerivedVariable, SpatialRelation
+
+class JsonCatalogStore:
+    def __init__(self, path: str | Path):
+        self.path = Path(path)
+        self._data = {"grids": {}, "sources": {}, "derived": {}, "relations": []}
+        if self.path.exists():
+            with open(self.path, "r") as f:
+                self._data = json.load(f)
+            if "relations" not in self._data:
+                self._data["relations"] = []
+
+    def _save(self):
+        with open(self.path, "w") as f:
+            json.dump(self._data, f, indent=2)
+
+    def save_grid(self, grid: GridSpec) -> None:
+        self._data["grids"][grid.id] = grid.model_dump()
+        self._save()
+
+    def get_grid(self, grid_id: str) -> Optional[GridSpec]:
+        data = self._data["grids"].get(grid_id)
+        return GridSpec(**data) if data else None
+
+    def list_grids(self) -> List[GridSpec]:
+        return [GridSpec(**g) for g in self._data["grids"].values()]
+
+    def save_source(self, source: DataSource) -> None:
+        self._data["sources"][source.id] = source.model_dump()
+        self._save()
+
+    def get_source(self, source_id: str) -> Optional[DataSource]:
+        data = self._data["sources"].get(source_id)
+        return DataSource(**data) if data else None
+
+    def list_sources(self) -> List[DataSource]:
+        return [DataSource(**s) for s in self._data["sources"].values()]
+
+    def save_derived(self, derived: DerivedVariable) -> None:
+        self._data["derived"][derived.id] = derived.model_dump()
+        self._save()
+
+    def search_derived(self, grid_id: str | None = None, role: str | None = None) -> List[DerivedVariable]:
+        results = []
+        for d in self._data["derived"].values():
+            if grid_id and d["grid_id"] != grid_id:
+                continue
+            if role and d["role"] != role:
+                continue
+            results.append(DerivedVariable(**d))
+        return results
+
+    def get_derived_by_hash(self, spec_hash: str) -> Optional[DerivedVariable]:
+        for d in self._data["derived"].values():
+            if d["spec_hash"] == spec_hash:
+                return DerivedVariable(**d)
+        return None
+
+    def save_relation(self, relation: SpatialRelation) -> None:
+        # Check if already exists to avoid duplicates
+        existing = self.get_relation(relation.source_grid_id, relation.target_grid_id)
+        if existing:
+            # Update
+            for i, r in enumerate(self._data["relations"]):
+                if r["source_grid_id"] == relation.source_grid_id and r["target_grid_id"] == relation.target_grid_id:
+                    self._data["relations"][i] = relation.model_dump()
+                    break
+        else:
+            self._data["relations"].append(relation.model_dump())
+        self._save()
+
+    def get_relations(self, grid_id: str) -> List[SpatialRelation]:
+        """Busca bidirecional: source_grid_id OU target_grid_id."""
+        return [
+            SpatialRelation(**r) for r in self._data["relations"]
+            if r["source_grid_id"] == grid_id or r["target_grid_id"] == grid_id
+        ]
+
+    def get_relation(self, source_id: str, target_id: str) -> Optional[SpatialRelation]:
+        for r in self._data["relations"]:
+            if r["source_grid_id"] == source_id and r["target_grid_id"] == target_id:
+                return SpatialRelation(**r)
+        return None
