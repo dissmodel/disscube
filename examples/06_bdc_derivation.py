@@ -6,7 +6,7 @@ import os
 cube = CubeClient(catalog="catalog.json", store="./data/")
 
 # 1. Check if the grid and source exist
-grid_id = "BDC_LG_009002"
+grid_id = "BDC_LG_009002_60m"
 source_id = "urban_centers"
 
 grid = cube.catalog.get_grid(grid_id)
