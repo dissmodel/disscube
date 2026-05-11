@@ -27,7 +27,7 @@ try:
     # Verify result
     derived = cube.search(grid=grid_id, role="driver")
     for d in derived:
-        if "mean_slope" in d.name:
+        if "major_slope" in d.name:
             print(f"Result saved at: {d.asset_url}")
             
 except Exception as e:
