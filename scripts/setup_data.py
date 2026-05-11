@@ -46,6 +46,10 @@ cube.register_grid(GridSpec(
     description="São Luís Grid"
 ))
 
+from disscube.utils.bdc_importer import import_bdc_grids
+
+# ... (previous code)
+
 # 4. Register SpatialSources
 cube.register_spatial_source(SpatialSource(
     id="maranhao_base",
@@ -63,7 +67,24 @@ cube.register_spatial_source(SpatialSource(
     crs="EPSG:4326"
 ))
 
-print("\nCatalog prepared with existing data from ecosystem.")
+# BDC Grids
+import_bdc_grids(
+    cube,
+    "zip://data/bdc_grids/BDC_SM_V2.zip",
+    "zip://data/bdc_grids/BDC_MD_V2.zip",
+    "zip://data/bdc_grids/BDC_LG_V2.zip"
+)
+
+# Urban Centers Source
+cube.register_spatial_source(SpatialSource(
+    id="urban_centers",
+    name="Urban Centers",
+    format="vector",
+    asset_url="data/raw/urban_center/centros_urbanos_m_100_pnlt_poly_sirgas2000.shp",
+    crs="EPSG:5880"
+))
+
+print("\nCatalog prepared with existing data from ecosystem and BDC grids.")
 
 # 5. Example Derivation (Declarative)
 acre_roads_derivation = SpatialDerivation(
