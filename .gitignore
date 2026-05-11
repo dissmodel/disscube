@@ -19,7 +19,7 @@ htmlcov/
 disscube.egg-info/
 catalog.json
 test_catalog.json
-data/
+data/derived
 outputs/
 
 # Build and Distribution

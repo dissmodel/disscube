@@ -33,7 +33,8 @@ class CubeClient:
 
     def derive(self, derivation: SpatialDerivation) -> List[DerivedVariable]:
         # Enriquecer derivação com relações diretas se não estiverem presentes
-        # A relação "direta" é aquela entre o grid_id da derivação e qualquer outro grid relacionado.
+        # Trabalhamos em uma cópia para não alterar o objeto original do usuário
+        derivation = derivation.model_copy(deep=True)
         if not derivation.relations:
             derivation.relations = self.get_relations(derivation.grid_id)
 
@@ -44,7 +45,7 @@ class CubeClient:
         all_derived = self.catalog.search_derived()
         cached_vars = [
             d for d in all_derived 
-            if d.spec_hash == spec_hash and os.path.exists(d.asset_url)
+            if d.spec_hash == spec_hash and self.store.fs.exists(d.asset_url)
         ]
         cached_names = {d.name for d in cached_vars}
         

@@ -1,15 +1,28 @@
+from disscube.client import CubeClient
 import xarray as xr
 import rioxarray
 import os
 
-zarr_path = "./data/derived/50c89f9c414256894434e197ffb5a461ffa7c39bb5cb743bab8b68eedd19d0ae/dist_sedes.zarr"
+# Initialize client to find the derived variable
+cube = CubeClient(catalog="catalog.json", store="./data/")
+
+# Search for the specific variable
+variable_name = "dist_sedes"
+derived = cube.search(grid="BDC_LG_009002", role="driver")
+target_var = next((d for d in derived if d.name == variable_name), None)
+
+if not target_var:
+    print(f"Error: Variable '{variable_name}' not found in catalog.")
+    exit(1)
+
+zarr_path = target_var.asset_url
 output_tif = "outputs/bdc_verification/dist_sedes_009002.tif"
 
 os.makedirs(os.path.dirname(output_tif), exist_ok=True)
 
 print(f"Opening Zarr: {zarr_path}")
 ds = xr.open_zarr(zarr_path)
-da = ds["dist_sedes"]
+da = ds[variable_name]
 
 # Explicit PROJ string for BDC Albers
 bdc_proj = "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
