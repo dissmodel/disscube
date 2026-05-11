@@ -3,33 +3,47 @@ import xarray as xr
 import rioxarray
 import os
 import sys
+import argparse
 
-# Initialize client to find the derived variable
-cube = CubeClient(catalog="catalog.json", store="./data/")
+def main():
+    parser = argparse.ArgumentParser(description="Export a derived Zarr variable to GeoTIFF.")
+    parser.add_argument("grid_id", help="The ID of the grid (e.g., BR/5km)")
+    parser.add_argument("variable", help="The name of the variable (e.g., mean_slope)")
+    parser.add_argument("--output", "-o", help="Output TIFF path (optional)")
+    
+    args = parser.parse_args()
 
-# Search for the specific variable
-variable_name = "dist_sedes"
-grid_id = "BDC_LG_009002_60m"
-derived = cube.search(grid=grid_id, role="driver")
-target_var = next((d for d in derived if d.name == variable_name), None)
+    # Initialize client
+    cube = CubeClient(catalog="catalog.json", store="./data/")
 
-if not target_var:
-    print(f"Error: Variable '{variable_name}' for grid '{grid_id}' not found in catalog.")
-    sys.exit(1)
+    # Search for the specific variable
+    grid = cube.catalog.get_grid(args.grid_id)
+    if not grid:
+        print(f"Error: Grid '{args.grid_id}' not found in catalog.")
+        sys.exit(1)
 
-zarr_path = target_var.asset_url
-output_tif = f"outputs/bdc_verification/dist_sedes_{grid_id}.tif"
+    derived = cube.search(grid=args.grid_id, role="driver")
+    target_var = next((d for d in derived if d.name == args.variable), None)
 
-os.makedirs(os.path.dirname(output_tif), exist_ok=True)
+    if not target_var:
+        print(f"Error: Variable '{args.variable}' for grid '{args.grid_id}' not found in catalog.")
+        sys.exit(1)
 
-print(f"Opening Zarr: {zarr_path}")
-ds = xr.open_zarr(zarr_path)
-da = ds[variable_name]
+    zarr_path = target_var.asset_url
+    output_tif = args.output or f"outputs/export_{args.grid_id.replace('/', '_')}_{args.variable}.tif"
 
-# Explicit PROJ string for BDC Albers
-bdc_proj = "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
-da.rio.write_crs(bdc_proj, inplace=True)
+    os.makedirs(os.path.dirname(output_tif), exist_ok=True)
 
-print(f"Exporting to TIF: {output_tif}")
-da.rio.to_raster(output_tif)
-print("Done.")
+    print(f"Opening Zarr: {zarr_path}")
+    ds = xr.open_zarr(zarr_path)
+    da = ds[args.variable]
+
+    # Write CRS from catalog grid definition
+    da.rio.write_crs(grid.crs, inplace=True)
+
+    print(f"Exporting to TIF: {output_tif}")
+    da.rio.to_raster(output_tif)
+    print(f"Done. File saved at: {output_tif}")
+
+if __name__ == "__main__":
+    main()
