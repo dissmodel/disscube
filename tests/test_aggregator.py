@@ -3,11 +3,11 @@ import xarray as xr
 import numpy as np
 from disscube.pipeline import PipelineContext
 from disscube.pipeline.aggregator import Aggregator
-from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
 
 def test_aggregator_strict_bands():
     grid = GridSpec(id="G1", type="local", crs="EPSG:31982", resolution=10, bbox=[0,0,100,100])
-    source = DataSource(
+    source = SpatialSource(
         id="S1", name="S1", format="raster", asset_url="test.tif", crs="EPSG:31982"
     )
     derivation = SpatialDerivation(
@@ -39,7 +39,7 @@ def test_aggregator_strict_bands():
 def test_aggregator_band_map_out_of_range():
     grid = GridSpec(id="G1", type="local", crs="EPSG:31982", resolution=10, bbox=[0,0,100,100])
     # band_map points to band 3, but data only has 2
-    source = DataSource(
+    source = SpatialSource(
         id="S1", name="S1", format="raster", asset_url="test.tif", crs="EPSG:31982",
         band_map={"B1": 3}
     )

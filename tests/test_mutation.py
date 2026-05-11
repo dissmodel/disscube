@@ -1,7 +1,7 @@
 import pytest
 import os
 from disscube.client import CubeClient
-from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable, SpatialRelation
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable, SpatialRelation
 
 def test_derive_no_mutation(tmp_path):
     catalog_file = tmp_path / "catalog.json"

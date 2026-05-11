@@ -9,7 +9,7 @@ class Variable(BaseModel):
     operator: str
     class_code: int | None = None
 
-class DataSource(BaseModel):
+class SpatialSource(BaseModel):
     id: str
     name: str
     format: Literal["raster", "vector"]

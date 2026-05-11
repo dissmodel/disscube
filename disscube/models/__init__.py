@@ -1,11 +1,12 @@
-from .grid import GridSpec, SpatialRelation
-from .variable import Variable, DataSource, DerivedVariable, SpatialDerivation
+from .grid import GridSpec, SpatialRelation, GridAnchor
+from .variable import Variable, SpatialSource, DerivedVariable, SpatialDerivation
 
 __all__ = [
     "GridSpec", 
     "SpatialRelation",
-    "DataSource", 
+    "GridAnchor",
+    "SpatialSource", 
     "Variable",
-    "SpatialDerivation", 
-    "DerivedVariable"
+    "DerivedVariable",
+    "SpatialDerivation"
 ]

@@ -15,9 +15,9 @@ DissCube is a component of the DisSModel ecosystem designed to represent, derive
 ## Core Concepts
 
 - `GridSpec`: Defines the target spatial extent and resolution.
-- `DataSource`: References raw raster or vector assets.
+- `SpatialSource`: References raw raster or vector assets.
 - `SpatialRelation`: Defines how a grid relates to another (e.g., multiscale coupling).
-- `SpatialDerivation`: Declares how to transform a `DataSource` into variables for a `GridSpec`.
+- `SpatialDerivation`: Declares how to transform a `SpatialSource` into variables for a `GridSpec`.
 - `DerivedVariable`: The resulting variable, ready to be used by a model.
 
 ## Integration
