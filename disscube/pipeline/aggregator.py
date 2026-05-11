@@ -26,7 +26,7 @@ class Aggregator(PipelineStage):
                 else:
                     raise ValueError(f"No band available for variable '{var.name}' at index {i}. Data has {data.sizes['band']} bands and no band_map was provided.")
 
-            if var.operator in ["mean", "sum", "std", "min", "max", "majority", "minority", "percentage", "attribute"]:
+            if var.operator in ["mean", "sum", "std", "min", "max", "majority", "minority", "percentage", "attribute", "presence"]:
                 res = ZonalAggregator.aggregate(var_data, [var], grid)
             elif var.operator in ["min_distance", "count"]:
                 res = ProximityAggregator.aggregate(var_data, [var], grid)
