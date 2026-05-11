@@ -1,11 +1,11 @@
 from typing import Any
 from pydantic import BaseModel, ConfigDict
-from disscube.models import DataSource, GridSpec, SpatialDerivation
+from disscube.models import SpatialSource, GridSpec, SpatialDerivation
 
 class PipelineContext(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
-    source: DataSource
+    source: SpatialSource
     grid: GridSpec
     derivation: SpatialDerivation
     data: Any = None 
