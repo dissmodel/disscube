@@ -15,7 +15,7 @@ derivation = SpatialDerivation(
     grid_id=grid_id,
     role="driver",
     variables=[
-        Variable(name="mean_slope", operator="mean")
+        Variable(name="major_slope", operator="majority")
     ]
 )
 
