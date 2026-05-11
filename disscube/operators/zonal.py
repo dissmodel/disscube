@@ -8,15 +8,11 @@ from affine import Affine
 class ZonalAggregator:
     @staticmethod
     def aggregate(data: xr.DataArray | gpd.GeoDataFrame, variables, grid_spec):
-        rows = int((grid_spec.bbox[3] - grid_spec.bbox[1]) / grid_spec.resolution)
-        cols = int((grid_spec.bbox[2] - grid_spec.bbox[0]) / grid_spec.resolution)
-        
-        # North-up transform: origin at (minx, maxy), negative y-scale
-        transform = Affine.translation(grid_spec.bbox[0], grid_spec.bbox[3]) * Affine.scale(grid_spec.resolution, -grid_spec.resolution)
-        
-        # Calculate cell centers for xarray coordinates (decreasing Y for North-up)
-        xs = np.arange(cols) * grid_spec.resolution + grid_spec.bbox[0] + grid_spec.resolution/2
-        ys = grid_spec.bbox[3] - (np.arange(rows) * grid_spec.resolution + grid_spec.resolution/2)
+        rows = grid_spec.rows
+        cols = grid_spec.cols
+        transform = grid_spec.transform
+        xs = grid_spec.xs
+        ys = grid_spec.ys
 
         if isinstance(data, gpd.GeoDataFrame):
             # Use the attribute if requested, otherwise use class_code
