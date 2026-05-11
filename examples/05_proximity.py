@@ -1,11 +1,7 @@
-import sys
-import os
-from disscube.client import CubeClient
-from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
 
-# Fix Path
-base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.insert(0, os.path.join(base_dir, "disscube"))
+from disscube.client import CubeClient
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
+import os
 
 cube = CubeClient(catalog="catalog.json", store="./data/")
 
@@ -21,24 +17,24 @@ grid_spec = GridSpec(
 )
 cube.register_grid(grid_spec)
 
-# 2. Register Vector DataSources with the correct CRS (EPSG:5880)
-rivers = DataSource(
+# 2. Register Vector SpatialSources with the correct CRS (EPSG:5880)
+rivers = SpatialSource(
     id="rios_pnlt",
     name="Rivers PNLT",
     format="vector",
     asset_url="data/raw/rios_pnlt/rios_pnlt_poly_sirgas2000.shp",
     crs="EPSG:5880"
 )
-cube.register_source(rivers)
+cube.register_spatial_source(rivers)
 
-urban = DataSource(
+urban = SpatialSource(
     id="urban_centers",
     name="Urban Centers",
     format="vector",
     asset_url="data/raw/urban_center/centros_urbanos_m_100_pnlt_poly_sirgas2000.shp",
     crs="EPSG:5880"
 )
-cube.register_source(urban)
+cube.register_spatial_source(urban)
 
 # 3. Declare SpatialDerivation for Distances
 derivation_rivers = SpatialDerivation(

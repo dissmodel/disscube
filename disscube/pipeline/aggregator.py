@@ -20,13 +20,13 @@ class Aggregator(PipelineStage):
                     if 0 <= band_idx < data.sizes["band"]:
                         var_data = data.isel(band=band_idx)
                     else:
-                        var_data = data.isel(band=0) # Fallback
+                        raise ValueError(f"Band index {band_idx+1} for variable '{var.name}' is out of range. Data has {data.sizes['band']} bands.")
                 elif i < data.sizes["band"]:
                     var_data = data.isel(band=i)
                 else:
-                    var_data = data.isel(band=0)
+                    raise ValueError(f"No band available for variable '{var.name}' at index {i}. Data has {data.sizes['band']} bands and no band_map was provided.")
 
-            if var.operator in ["mean", "sum", "std", "min", "max", "majority", "minority", "percentage", "attribute"]:
+            if var.operator in ["mean", "sum", "std", "min", "max", "majority", "minority", "percentage", "attribute", "presence"]:
                 res = ZonalAggregator.aggregate(var_data, [var], grid)
             elif var.operator in ["min_distance", "count"]:
                 res = ProximityAggregator.aggregate(var_data, [var], grid)

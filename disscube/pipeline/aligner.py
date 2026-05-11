@@ -4,7 +4,7 @@ import geopandas as gpd
 import xarray as xr
 import numpy as np
 from disscube.pipeline import PipelineStage, PipelineContext
-from disscube.models import GridSpec
+from disscube.models import GridSpec, Variable
 
 class GridAligner(PipelineStage):
     def execute(self, ctx: PipelineContext) -> PipelineContext:
@@ -13,7 +13,8 @@ class GridAligner(PipelineStage):
         
         if fmt == "raster":
             # For raster, we'll use rasterio to reproject/crop to grid bbox/resolution
-            ctx.data = self._align_raster(ctx.source.asset_url, grid)
+            # Pass variables to decide resampling method
+            ctx.data = self._align_raster(ctx.source.asset_url, grid, ctx.derivation.variables)
         elif fmt == "vector":
             # For vector, ensure CRS matches grid
             gdf = ctx.data
@@ -27,37 +28,42 @@ class GridAligner(PipelineStage):
             
         return ctx
 
-    def _align_raster(self, url: str, grid: GridSpec) -> xr.DataArray:
+    def _align_raster(self, url: str, grid: GridSpec, variables: list[Variable] = None) -> xr.DataArray:
         import rioxarray
-        from shapely.geometry import box
+        from rasterio.warp import Resampling
+        from affine import Affine
         
         # Load the raster
         ds = rioxarray.open_rasterio(url)
         
-        # Ensure it's EPSG:31983 or whatever the grid expects
-        if ds.rio.crs != grid.crs:
-            ds = ds.rio.reproject(grid.crs)
-            
-        # Select resolution and extent
-        # We use reproject to resample to the exact grid resolution and alignment
-        # This is more robust than just clipping
-        from rasterio.warp import Resampling
-        
-        # Create target coords
-        import numpy as np
-        rows = int((grid.bbox[3] - grid.bbox[1]) / grid.resolution)
-        cols = int((grid.bbox[2] - grid.bbox[0]) / grid.resolution)
+        # Determine resampling method based on operator
+        resampling_method = Resampling.nearest
+        if variables:
+            op = variables[0].operator.lower()
+            if op in ["mean", "average"]:
+                resampling_method = Resampling.average
+            elif op in ["majority", "mode"]:
+                resampling_method = Resampling.mode
+            elif op == "max":
+                resampling_method = Resampling.max
+            elif op == "min":
+                resampling_method = Resampling.min
+            elif op == "sum":
+                resampling_method = Resampling.sum
+
+        # Target size
+        rows = grid.rows
+        cols = grid.cols
         
         # Target transform
-        from affine import Affine
-        target_transform = Affine.translation(grid.bbox[0], grid.bbox[3]) * Affine.scale(grid.resolution, -grid.resolution)
+        target_transform = grid.transform
         
         # Use rioxarray's reproject to match the target grid perfectly
         aligned = ds.rio.reproject(
             grid.crs,
             shape=(rows, cols),
             transform=target_transform,
-            resampling=Resampling.nearest
+            resampling=resampling_method
         )
         
         return aligned

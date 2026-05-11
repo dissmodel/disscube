@@ -4,7 +4,7 @@ import xarray as xr
 from dissmodel.geo.raster.backend import RasterBackend
 from disscube.catalog import JsonCatalogStore
 from disscube.storage import AssetStore
-from disscube.models import GridSpec, DataSource, SpatialDerivation, DerivedVariable, SpatialRelation
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, DerivedVariable, SpatialRelation
 from disscube.pipeline import PipelineContext
 from disscube.pipeline.normalizer import Normalizer
 from disscube.pipeline.aligner import GridAligner
@@ -19,8 +19,8 @@ class CubeClient:
     def register_grid(self, grid: GridSpec):
         self.catalog.save_grid(grid)
 
-    def register_source(self, source: DataSource):
-        self.catalog.save_source(source)
+    def register_spatial_source(self, source: SpatialSource):
+        self.catalog.save_spatial_source(source)
 
     def register_relation(self, relation: SpatialRelation):
         self.catalog.save_relation(relation)
@@ -29,11 +29,12 @@ class CubeClient:
         return self.catalog.get_relations(grid_id)
 
     def search(self, grid: Optional[str] = None, role: Optional[str] = None) -> List[DerivedVariable]:
-        return self.catalog.search_derived(grid_id=grid, role=role)
+        return self.catalog.search_derived_variables(grid_id=grid, role=role)
 
     def derive(self, derivation: SpatialDerivation) -> List[DerivedVariable]:
         # Enriquecer derivação com relações diretas se não estiverem presentes
-        # A relação "direta" é aquela entre o grid_id da derivação e qualquer outro grid relacionado.
+        # Trabalhamos em uma cópia para não alterar o objeto original do usuário
+        derivation = derivation.model_copy(deep=True)
         if not derivation.relations:
             derivation.relations = self.get_relations(derivation.grid_id)
 
@@ -41,19 +42,19 @@ class CubeClient:
         
         # Check cache and physical existence for ALL expected variables
         expected = {v.name for v in derivation.variables}
-        all_derived = self.catalog.search_derived()
+        all_derived = self.catalog.search_derived_variables()
         cached_vars = [
             d for d in all_derived 
-            if d.spec_hash == spec_hash and os.path.exists(d.asset_url)
+            if d.spec_hash == spec_hash and self.store.fs.exists(d.asset_url)
         ]
         cached_names = {d.name for d in cached_vars}
         
         if expected == cached_names:
             return cached_vars
 
-        source = self.catalog.get_source(derivation.source_id)
+        source = self.catalog.get_spatial_source(derivation.source_id)
         if not source:
-            raise ValueError(f"Source not found: {derivation.source_id}")
+            raise ValueError(f"SpatialSource not found: {derivation.source_id}")
             
         grid = self.catalog.get_grid(derivation.grid_id)
         if not grid:
@@ -71,13 +72,13 @@ class CubeClient:
         for stage in pipeline:
             ctx = stage.execute(ctx)
             
-        return [d for d in self.catalog.search_derived() if d.spec_hash == spec_hash]
+        return [d for d in self.catalog.search_derived_variables() if d.spec_hash == spec_hash]
 
     def load(self, variable_id: str) -> xr.DataArray:
         # Search for derived variable
         # For simplicity, assuming variable_id is name or ID
         derived = None
-        for d in self.catalog.search_derived():
+        for d in self.catalog.search_derived_variables():
             if d.id == variable_id or d.name == variable_id:
                 derived = d
                 break
@@ -87,7 +88,7 @@ class CubeClient:
             
         return xr.open_zarr(derived.asset_url)[derived.name]
 
-    def to_lucc_data(self, variables: List[str]) -> RasterBackend:
+    def to_lucc_data(self, variables: List[str], **kwargs) -> RasterBackend:
         """
         Standard integration point for the DisSModel ecosystem.
         Returns a RasterBackend containing all requested variables as bands.
@@ -120,7 +121,7 @@ class CubeClient:
         Helper for dissmodel-platform ExperimentRecord.
         """
         derived = None
-        for d in self.catalog.search_derived():
+        for d in self.catalog.search_derived_variables():
             if d.id == derived_id:
                 derived = d
                 break
