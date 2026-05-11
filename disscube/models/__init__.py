@@ -1,7 +1,5 @@
-from .grid_spec import GridSpec, SpatialRelation
-from .data_source import DataSource
-from .variable import Variable, SpatialDerivation
-from .derived import DerivedVariable
+from .grid import GridSpec, SpatialRelation
+from .variable import Variable, DataSource, DerivedVariable, SpatialDerivation
 
 __all__ = [
     "GridSpec", 

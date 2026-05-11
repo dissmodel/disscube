@@ -1,12 +1,8 @@
+from disscube.client import CubeClient
 import xarray as xr
 import rioxarray
 import os
 import sys
-from disscube.client import CubeClient
-
-# Fix Path
-base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.insert(0, os.path.join(base_dir, "disscube"))
 
 # Initialize client
 cube = CubeClient(catalog="catalog.json", store="./data/")

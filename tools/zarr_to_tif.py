@@ -2,6 +2,7 @@ from disscube.client import CubeClient
 import xarray as xr
 import rioxarray
 import os
+import sys
 
 # Initialize client to find the derived variable
 cube = CubeClient(catalog="catalog.json", store="./data/")
@@ -13,7 +14,7 @@ target_var = next((d for d in derived if d.name == variable_name), None)
 
 if not target_var:
     print(f"Error: Variable '{variable_name}' not found in catalog.")
-    exit(1)
+    sys.exit(1)
 
 zarr_path = target_var.asset_url
 output_tif = "outputs/bdc_verification/dist_sedes_009002.tif"

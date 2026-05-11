@@ -1,14 +1,6 @@
-import sys
-import os
 from disscube.client import CubeClient
 from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
-
-# Fix Path: Add brmangue-dissmodel, dissmodel core, and disscube to path
-# We use absolute paths based on the structure provided
-base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.insert(0, os.path.join(base_dir, "brmangue-dissmodel"))
-sys.path.insert(0, os.path.join(base_dir, "dissmodel"))
-sys.path.insert(0, os.path.join(base_dir, "disscube"))
+import os
 
 try:
     from brmangue.executor.brmangue_executor import BrmangueExecutor
@@ -61,6 +53,7 @@ derivation = SpatialDerivation(
 )
 
 # 4. Execute pipeline (derive)
+print(f"Spec Hash: {derivation.spec_hash()}")
 print("Executing derivation pipeline (this might take a few seconds)...")
 cube.derive(derivation)
 
