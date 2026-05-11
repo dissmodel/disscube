@@ -16,9 +16,13 @@ class ZonalAggregator:
 
         if isinstance(data, gpd.GeoDataFrame):
             # Use the attribute if requested, otherwise use class_code
-            column = variables[0].name if variables[0].operator == "attribute" else None
+            op = variables[0].operator
+            column = variables[0].name if op == "attribute" else None
             
-            if column and column in data.columns:
+            if op == "presence":
+                val = variables[0].class_code if variables[0].class_code is not None else 1
+                shapes = ((geom, val) for geom in data.geometry if geom is not None)
+            elif column and column in data.columns:
                 # Filter out None geometries and get values
                 valid_mask = data.geometry.notnull()
                 shapes = zip(data.geometry[valid_mask], data[column][valid_mask])
