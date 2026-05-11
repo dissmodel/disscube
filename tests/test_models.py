@@ -35,8 +35,8 @@ def test_spec_hash_stability():
         ]
     )
     
-    # Different order of variables should result in different hash
-    assert derivation1.spec_hash() != derivation3.spec_hash()
+    # Different order of variables should now result in the same hash (robust hashing)
+    assert derivation1.spec_hash() == derivation3.spec_hash()
 
 def test_spec_hash_determinism():
     derivation = SpatialDerivation(

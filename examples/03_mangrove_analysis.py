@@ -1,14 +1,6 @@
-import sys
-import os
 from disscube.client import CubeClient
-from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
-
-# Fix Path: Add brmangue-dissmodel, dissmodel core, and disscube to path
-# We use absolute paths based on the structure provided
-base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.insert(0, os.path.join(base_dir, "brmangue-dissmodel"))
-sys.path.insert(0, os.path.join(base_dir, "dissmodel"))
-sys.path.insert(0, os.path.join(base_dir, "disscube"))
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
+import os
 
 try:
     from brmangue.executor.brmangue_executor import BrmangueExecutor
@@ -35,16 +27,16 @@ grid_spec = GridSpec(
 )
 cube.register_grid(grid_spec)
 
-# 2. Register DataSource
+# 2. Register SpatialSource
 # Using the sample TIFF from brmangue-dissmodel
-data_source = DataSource(
+data_source = SpatialSource(
     id="fonte_brmangue",
     name="Brmangue Input Raster",
     format="raster",
     asset_url="../brmangue-dissmodel/examples/data/input/ilha_maranhao_epsg31983.tif",
     crs="EPSG:31983"
 )
-cube.register_source(data_source)
+cube.register_spatial_source(data_source)
 
 # 3. Declare SpatialDerivation
 # We derive "uso", "alt", and "solo" from the same source for this example
@@ -61,6 +53,7 @@ derivation = SpatialDerivation(
 )
 
 # 4. Execute pipeline (derive)
+print(f"Spec Hash: {derivation.spec_hash()}")
 print("Executing derivation pipeline (this might take a few seconds)...")
 cube.derive(derivation)
 

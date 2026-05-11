@@ -6,11 +6,11 @@ import os
 cube = CubeClient(catalog="catalog.json", store="./data/")
 
 # 1. Check if the grid and source exist
-grid_id = "BDC_LG_009002"
+grid_id = "BDC_LG_009002_60m"
 source_id = "urban_centers"
 
 grid = cube.catalog.get_grid(grid_id)
-source = cube.catalog.get_source(source_id)
+source = cube.catalog.get_spatial_source(source_id)
 
 if not grid:
     print(f"Error: Grid {grid_id} not found in catalog.")

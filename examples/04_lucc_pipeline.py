@@ -1,11 +1,6 @@
-import sys
-import os
-from disscube.client import CubeClient
-from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
 
-# Fix Path
-base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.insert(0, os.path.join(base_dir, "disscube"))
+from disscube.client import CubeClient
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
 
 cube = CubeClient(catalog="catalog.json", store="./data/")
 
@@ -21,14 +16,14 @@ grid_spec = GridSpec(
 cube.register_grid(grid_spec)
 
 # 2. Registrar Fonte Vetorial (Com o CRS correto)
-data_source = DataSource(
+data_source = SpatialSource(
     id="acre_base_metric",
     name="Acre Vector Data Metric",
     format="vector",
     asset_url="../disslucc-continuous/examples/data/input/csAC.zip",
     crs="EPSG:29101"
 )
-cube.register_source(data_source)
+cube.register_spatial_source(data_source)
 
 # 3. Declarar Derivação
 derivation = SpatialDerivation(

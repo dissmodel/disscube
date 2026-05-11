@@ -1,5 +1,5 @@
 from disscube.client import CubeClient
-from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
 import os
 
 # Setup local paths
@@ -19,15 +19,15 @@ acre_grid = GridSpec(
 )
 cube.register_grid(acre_grid)
 
-# 2. Register DataSource (Placeholder URI)
-roads = DataSource(
+# 2. Register SpatialSource (Placeholder URI)
+roads = SpatialSource(
     id="roads_v1",
     name="Main Roads",
     format="vector",
     asset_url="data/raw/roads.shp", # Assume this exists for the example
     crs="EPSG:31983"
 )
-cube.register_source(roads)
+cube.register_spatial_source(roads)
 
 # 3. Derive Variable
 derivation = SpatialDerivation(
