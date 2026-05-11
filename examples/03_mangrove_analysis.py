@@ -1,5 +1,5 @@
 from disscube.client import CubeClient
-from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
 import os
 
 try:
@@ -27,16 +27,16 @@ grid_spec = GridSpec(
 )
 cube.register_grid(grid_spec)
 
-# 2. Register DataSource
+# 2. Register SpatialSource
 # Using the sample TIFF from brmangue-dissmodel
-data_source = DataSource(
+data_source = SpatialSource(
     id="fonte_brmangue",
     name="Brmangue Input Raster",
     format="raster",
     asset_url="../brmangue-dissmodel/examples/data/input/ilha_maranhao_epsg31983.tif",
     crs="EPSG:31983"
 )
-cube.register_source(data_source)
+cube.register_spatial_source(data_source)
 
 # 3. Declare SpatialDerivation
 # We derive "uso", "alt", and "solo" from the same source for this example

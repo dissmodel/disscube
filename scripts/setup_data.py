@@ -1,7 +1,7 @@
 import os
 import shutil
 from disscube.client import CubeClient
-from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
 
 # 1. Setup paths
 CUBE_ROOT = os.getcwd()
@@ -46,8 +46,8 @@ cube.register_grid(GridSpec(
     description="São Luís Grid"
 ))
 
-# 4. Register DataSources
-cube.register_source(DataSource(
+# 4. Register SpatialSources
+cube.register_spatial_source(SpatialSource(
     id="maranhao_base",
     name="Maranhao TIFF",
     format="raster",
@@ -55,7 +55,7 @@ cube.register_source(DataSource(
     crs="EPSG:31983"
 ))
 
-cube.register_source(DataSource(
+cube.register_spatial_source(SpatialSource(
     id="acre_base",
     name="Acre Vector",
     format="vector",

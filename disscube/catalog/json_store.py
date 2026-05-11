@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import List, Optional
-from disscube.models import GridSpec, DataSource, DerivedVariable, SpatialRelation
+from disscube.models import GridSpec, SpatialSource, DerivedVariable, SpatialRelation
 
 class JsonCatalogStore:
     def __init__(self, path: str | Path):
@@ -28,22 +28,22 @@ class JsonCatalogStore:
     def list_grids(self) -> List[GridSpec]:
         return [GridSpec(**g) for g in self._data["grids"].values()]
 
-    def save_source(self, source: DataSource) -> None:
+    def save_spatial_source(self, source: SpatialSource) -> None:
         self._data["sources"][source.id] = source.model_dump()
         self._save()
 
-    def get_source(self, source_id: str) -> Optional[DataSource]:
+    def get_spatial_source(self, source_id: str) -> Optional[SpatialSource]:
         data = self._data["sources"].get(source_id)
-        return DataSource(**data) if data else None
+        return SpatialSource(**data) if data else None
 
-    def list_sources(self) -> List[DataSource]:
-        return [DataSource(**s) for s in self._data["sources"].values()]
+    def list_spatial_sources(self) -> List[SpatialSource]:
+        return [SpatialSource(**s) for s in self._data["sources"].values()]
 
     def save_derived(self, derived: DerivedVariable) -> None:
         self._data["derived"][derived.id] = derived.model_dump()
         self._save()
 
-    def search_derived(self, grid_id: str | None = None, role: str | None = None) -> List[DerivedVariable]:
+    def search_derived_variables(self, grid_id: str | None = None, role: str | None = None) -> List[DerivedVariable]:
         results = []
         for d in self._data["derived"].values():
             if grid_id and d["grid_id"] != grid_id:

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from typing import List, Optional
 from disscube.client import CubeClient
-from disscube.models import GridSpec, DataSource, SpatialDerivation, DerivedVariable
+from disscube.models import GridSpec, SpatialSource, SpatialDerivation, DerivedVariable
 from .config import CATALOG_PATH, STORE_PATH
 
 app = FastAPI(title="DissCube API")
@@ -17,13 +17,13 @@ def register_grid(grid: GridSpec):
     cube.register_grid(grid)
     return {"status": "ok"}
 
-@app.get("/sources", response_model=List[DataSource])
-def list_sources():
-    return cube.catalog.list_sources()
+@app.get("/sources", response_model=List[SpatialSource])
+def list_spatial_sources():
+    return cube.catalog.list_spatial_sources()
 
 @app.post("/sources")
-def register_source(source: DataSource):
-    cube.register_source(source)
+def register_spatial_source(source: SpatialSource):
+    cube.register_spatial_source(source)
     return {"status": "ok"}
 
 @app.post("/derive", response_model=List[DerivedVariable])
