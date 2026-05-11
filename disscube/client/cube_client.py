@@ -88,7 +88,7 @@ class CubeClient:
             
         return xr.open_zarr(derived.asset_url)[derived.name]
 
-    def to_lucc_data(self, variables: List[str]) -> RasterBackend:
+    def to_lucc_data(self, variables: List[str], **kwargs) -> RasterBackend:
         """
         Standard integration point for the DisSModel ecosystem.
         Returns a RasterBackend containing all requested variables as bands.

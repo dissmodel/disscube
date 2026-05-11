@@ -1,11 +1,6 @@
-import sys
-import os
+
 from disscube.client import CubeClient
 from disscube.models import GridSpec, DataSource, SpatialDerivation, Variable
-
-# Fix Path
-base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.insert(0, os.path.join(base_dir, "disscube"))
 
 cube = CubeClient(catalog="catalog.json", store="./data/")
 
