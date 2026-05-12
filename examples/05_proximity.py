@@ -3,7 +3,7 @@ from disscube.client import CubeClient
 from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
 import os
 
-cube = CubeClient(catalog="catalog.json", store="./data/")
+cube = CubeClient(catalog="catalog.db", store="./data/")
 
 # 1. Register a Grid for All Brazil (5km resolution, EPSG:5880)
 # Bounds based on the PNLT vector data extent we just verified

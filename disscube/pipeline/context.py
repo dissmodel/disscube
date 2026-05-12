@@ -8,6 +8,7 @@ class PipelineContext(BaseModel):
     source: SpatialSource
     grid: GridSpec
     derivation: SpatialDerivation
+    tile_id: str | None = None
     data: Any = None 
     # Current data in the pipeline.
     # Contract:

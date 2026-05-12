@@ -2,22 +2,22 @@ from disscube.client import CubeClient
 from disscube.models import GridSpec
 
 def main():
-    cube = CubeClient(catalog="catalog.json", store="./data/")
+    cube = CubeClient(catalog="catalog.db", store="./data/")
     
     # Get original grid
-    orig = cube.catalog.get_grid("BDC_LG_009002")
+    orig = cube.catalog.get_grid("BDC_LG")
     if not orig:
-        print("Original grid not found")
+        print("Original grid (BDC_LG) not found")
         return
 
-    # Register 60m version
+    # Register 300m version
     new_grid = GridSpec(
-        id="BDC_LG_009002_60m",
+        id="BDC_LG_300m",
         type="local",
         crs=orig.crs,
-        resolution=60.0,
+        resolution=300.0,
         bbox=orig.bbox,
-        description="BDC LG 009002 at 60m resolution"
+        description="BDC LG Master Grid at 300m resolution"
     )
     cube.register_grid(new_grid)
     print(f"Registered {new_grid.id} with {new_grid.rows} rows and {new_grid.cols} cols")

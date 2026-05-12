@@ -5,7 +5,7 @@ import os
 import sys
 
 # Initialize client
-cube = CubeClient(catalog="catalog.json", store="./data/")
+cube = CubeClient(catalog="catalog.db", store="./data/")
 
 # 1. Search for Acre LUC data and Distance drivers in the catalog
 results = cube.search(grid="AC/5km-métrica", role="luc_observation")
