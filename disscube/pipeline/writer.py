@@ -15,10 +15,9 @@ class VariableWriter(PipelineStage):
         derivation = ctx.derivation
         spec_hash = derivation.spec_hash()
         
-        # Extract tile_id if applicable
-        # Rule: if grid is BDC master grid, extract tile from source id
-        tile_id = None
-        if grid.id.startswith("BDC_"):
+        # Extract tile_id: prioritize context, then fallback to source_id pattern
+        tile_id = ctx.tile_id
+        if not tile_id and grid.id.startswith("BDC_"):
             # Expecting source.id like "BDC_LG_009002"
             parts = ctx.source.id.split("_")
             if len(parts) >= 3:

@@ -16,7 +16,8 @@ def import_bdc_grids(cube: CubeClient, sm_path: str, md_path: str, lg_path: str)
     grid_configs = [
         ('SM', sm_path, 10.0),   # 10m resolution
         ('MD', md_path, 30.0),   # 30m resolution
-        ('LG', lg_path, 60.0)    # 60m resolution
+        ('LG', lg_path, 60.0),   # 60m resolution
+        ('100m', lg_path, 100.0) # 100m custom resolution (using LG tiles as spatial reference)
     ]
     
     for label, path, resolution in grid_configs:
@@ -37,15 +38,17 @@ def import_bdc_grids(cube: CubeClient, sm_path: str, md_path: str, lg_path: str)
         with fiona.open(path) as src:
             for rec in src:
                 tile_id = rec['properties']['tile']
+                geom = shape(rec['geometry'])
+                bbox = list(geom.bounds)
+                
                 # Create a SpatialSource for each tile
-                # Note: asset_url here is a placeholder or should point to actual data
-                # In a real scenario, this would be the path to the BDC Zarr/COGS
                 source = SpatialSource(
                     id=f"{grid_id}_{tile_id}",
                     name=f"BDC {label} Tile {tile_id}",
                     format="raster",
-                    asset_url=f"/data/bdc/{label}/{tile_id}.tif", # Example path
-                    crs=bdc_crs
+                    asset_url=f"data/bdc/{label}/{tile_id}.tif",
+                    crs=bdc_crs,
+                    bbox=bbox
                 )
                 cube.register_spatial_source(source)
         print(f"Finished BDC_{label}")

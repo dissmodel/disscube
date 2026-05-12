@@ -7,7 +7,7 @@ import json
 
 class TestBDCMasterGrids(unittest.TestCase):
     def setUp(self):
-        self.catalog_path = "test_catalog.json"
+        self.catalog_path = "test_catalog.db"
         self.store_path = "./test_store"
         if os.path.exists(self.catalog_path):
             os.remove(self.catalog_path)

@@ -2,7 +2,7 @@ from typing import Optional, List, Any
 import os
 import xarray as xr
 from dissmodel.geo.raster.backend import RasterBackend
-from disscube.catalog import JsonCatalogStore
+from disscube.catalog.sqlite_store import SqliteCatalogStore
 from disscube.storage import AssetStore
 from disscube.models import GridSpec, SpatialSource, SpatialDerivation, DerivedVariable, SpatialRelation
 from disscube.pipeline import PipelineContext
@@ -13,7 +13,7 @@ from disscube.pipeline.writer import VariableWriter
 
 class CubeClient:
     def __init__(self, catalog: str, store: str):
-        self.catalog = JsonCatalogStore(catalog)
+        self.catalog = SqliteCatalogStore(catalog)
         self.store = AssetStore(store)
 
     def register_grid(self, grid: GridSpec):
@@ -31,22 +31,14 @@ class CubeClient:
     def search(self, grid: Optional[str] = None, role: Optional[str] = None) -> List[DerivedVariable]:
         return self.catalog.search_derived_variables(grid_id=grid, role=role)
 
-    def derive(self, derivation: SpatialDerivation) -> List[DerivedVariable]:
+    def derive(self, derivation: SpatialDerivation, tile_id: Optional[str] = None) -> List[DerivedVariable]:
         # Enriquecer derivação com relações diretas se não estiverem presentes
-        # Trabalhamos em uma cópia para não alterar o objeto original do usuário
         derivation = derivation.model_copy(deep=True)
         if not derivation.relations:
             derivation.relations = self.get_relations(derivation.grid_id)
 
         spec_hash = derivation.spec_hash()
         
-        # Try to identify tile_id from source_id
-        tile_id = None
-        if derivation.grid_id.startswith("BDC_"):
-            parts = derivation.source_id.split("_")
-            if len(parts) >= 3:
-                tile_id = parts[-1]
-
         # Check cache and physical existence for ALL expected variables
         expected = {v.name for v in derivation.variables}
         all_derived = self.catalog.search_derived_variables(tile_id=tile_id)
@@ -67,8 +59,27 @@ class CubeClient:
         if not grid:
             raise ValueError(f"Grid not found: {derivation.grid_id}")
 
-        ctx = PipelineContext(source=source, grid=grid, derivation=derivation)
+        # Se um tile_id foi fornecido, precisamos ajustar o contexto para processar apenas essa área
+        if tile_id:
+            # Buscar a geometria do tile no catálogo (ele foi registrado como SpatialSource pelo bdc_importer)
+            tile_source = self.catalog.get_spatial_source(f"{grid.id}_{tile_id}")
+            if not tile_source or not tile_source.bbox:
+                raise ValueError(f"Tile {tile_id} with valid bbox not found for grid {grid.id}")
+            
+            # Criar uma nova GridSpec restrita à área do tile
+            # Mantendo o ID original para o Writer saber que pertence à grade master
+            grid = GridSpec(
+                id=grid.id,
+                type=grid.type,
+                crs=grid.crs,
+                resolution=grid.resolution,
+                bbox=tile_source.bbox,
+                description=f"Temporary tile grid for {tile_id}"
+            )
+
+        ctx = PipelineContext(source=source, grid=grid, derivation=derivation, tile_id=tile_id)
         
+        # O VariableWriter usará o tile_id se ele estiver presente ou for detectado
         pipeline = [
             Normalizer(),
             GridAligner(),

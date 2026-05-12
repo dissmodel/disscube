@@ -2,7 +2,7 @@
 from disscube.client import CubeClient
 from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
 
-cube = CubeClient(catalog="catalog.json", store="./data/")
+cube = CubeClient(catalog="catalog.db", store="./data/")
 
 # 1. Registrar Grade do Acre (Métrica - 5km)
 grid_spec = GridSpec(

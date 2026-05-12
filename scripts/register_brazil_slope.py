@@ -2,7 +2,7 @@ from disscube.client import CubeClient
 from disscube.models import GridSpec, SpatialSource
 
 def main():
-    cube = CubeClient(catalog="catalog.json", store="./data/")
+    cube = CubeClient(catalog="catalog.db", store="./data/")
     
     # 1. Register the Slope Raster Source
     # Metadata from tools/inspect_raster.py:

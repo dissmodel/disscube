@@ -3,24 +3,26 @@ from disscube.models import SpatialDerivation, Variable
 import os
 
 # Initialize client
-cube = CubeClient(catalog="catalog.json", store="./data/")
+cube = CubeClient(catalog="catalog.db", store="./data/")
 
 # 1. Check if the grid and source exist
-grid_id = "BDC_LG_009002_60m"
-source_id = "urban_centers"
+grid_id = "BDC_100m"
+source_id = "urban_centers" 
+tile_id = "009002"
 
 grid = cube.catalog.get_grid(grid_id)
 source = cube.catalog.get_spatial_source(source_id)
 
 if not grid:
-    print(f"Error: Grid {grid_id} not found in catalog.")
+    print(f"Error: Master Grid {grid_id} not found in catalog.")
     exit(1)
 
 if not source:
     print(f"Error: Source {source_id} not found in catalog.")
     exit(1)
 
-print(f"Target Grid: {grid_id}")
+print(f"Target Master Grid: {grid_id}")
+print(f"Target Tile: {tile_id}")
 print(f"Source: {source_id} ({source.asset_url})")
 
 # 2. Declare SpatialDerivation
@@ -33,18 +35,23 @@ derivation = SpatialDerivation(
     ]
 )
 
-# 3. Execute pipeline (derive)
-print("\nExecuting distance derivation (ProximityAggregator)...")
+# 3. Execute pipeline (derive) for the specific tile
+print(f"\nExecuting distance derivation for tile {tile_id}...")
 try:
-    cube.derive(derivation)
+    derived_vars = cube.derive(derivation, tile_id=tile_id)
     print("Derivation successful.")
     
     # 4. Load result to verify
-    derived = cube.search(grid=grid_id, role="driver")
-    for d in derived:
-        if "dist_sedes" in d.name:
-            print(f"Result saved at: {d.asset_url}")
-            
+    if derived_vars:
+        var = derived_vars[0]
+        res = cube.load(var.name, tile_id=tile_id)
+        print(f"Result loaded successfully.")
+        print(f" - Variable: {var.name}")
+        print(f" - Tile: {tile_id}")
+        print(f" - Shape: {res.shape}")
+        print(f" - Path: {var.asset_url}")
+    
 except Exception as e:
     print(f"Error during derivation: {e}")
-    print("\nNote: Ensure the source file exists at the specified path.")
+    import traceback
+    traceback.print_exc()

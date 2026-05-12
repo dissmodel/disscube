@@ -23,7 +23,7 @@ if os.path.exists(ACRE_DATA):
     print("Copied Acre Vector (zip)")
 
 # 2. Initialize Cube
-CATALOG_FILE = "catalog.json"
+CATALOG_FILE = "catalog.db"
 if os.path.exists(CATALOG_FILE):
     os.remove(CATALOG_FILE)
     print(f"Removed old {CATALOG_FILE} to reset architecture.")

@@ -16,6 +16,7 @@ class SpatialSource(BaseModel):
     asset_url: str
     checksum: str | None = None
     crs: str
+    bbox: list[float] | None = None
     time: int | None = None
     tags: list[str] = []
     band_map: dict[str, int] = {}  # variable_name -> band_index (1-based), optional

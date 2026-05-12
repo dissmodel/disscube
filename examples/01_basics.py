@@ -6,7 +6,7 @@ import os
 os.makedirs("data/raw", exist_ok=True)
 os.makedirs("data/derived", exist_ok=True)
 
-cube = CubeClient(catalog="catalog.json", store="./data/")
+cube = CubeClient(catalog="catalog.db", store="./data/")
 
 # 1. Register Grid
 acre_grid = GridSpec(

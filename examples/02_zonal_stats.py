@@ -7,7 +7,7 @@ except ImportError:
     print("dissmodel or disslucc-continuous not found in path. Skipping execution part.")
     LUCCRasterExecutor = None
 
-cube = CubeClient(catalog="catalog.json", store="./data/")
+cube = CubeClient(catalog="catalog.db", store="./data/")
 
 # Assuming variables are already derived
 variables = ["forest_pct", "dist_roads", "dist_urban"]
