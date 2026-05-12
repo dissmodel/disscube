@@ -3,7 +3,7 @@ from disscube.models import SpatialDerivation, Variable
 import os
 
 # Initialize client
-cube = CubeClient(catalog="catalog.json", store="./data/")
+cube = CubeClient(catalog="catalog.db", store="./data/")
 
 grid_id = "BR/5km"
 source_id = "slope_brazil"

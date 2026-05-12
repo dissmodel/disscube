@@ -1,0 +1,34 @@
+site_name: DisSCube Documentation
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.tabs
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Catalog & Persistence: architecture/catalog.md
+      - Pipeline Stages: architecture/pipeline.md
+      - Master Grids & Tiling: architecture/tiling.md
+  - Guides:
+      - BDC Integration: guides/bdc.md
+      - Custom Grids: guides/grids.md

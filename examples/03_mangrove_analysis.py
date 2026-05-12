@@ -13,7 +13,7 @@ except ImportError as e:
 # Initialize client
 # Note: catalog.json and data/ will be created/used in the current working directory
 # When running from disscube root: python examples/example_03_brmangue.py
-cube = CubeClient(catalog="catalog.json", store="./data/")
+cube = CubeClient(catalog="catalog.db", store="./data/")
 
 # 1. Register GridSpec
 # Creating a 100m grid for the Brmangue area (São Luís)

@@ -16,6 +16,7 @@ class SpatialSource(BaseModel):
     asset_url: str
     checksum: str | None = None
     crs: str
+    bbox: list[float] | None = None
     time: int | None = None
     tags: list[str] = []
     band_map: dict[str, int] = {}  # variable_name -> band_index (1-based), optional
@@ -30,6 +31,7 @@ class DerivedVariable(BaseModel):
     units: str | None = None
     derivation_id: str
     spec_hash: str
+    tile_id: str | None = None
     content_hash: str | None = None
     asset_url: str
 

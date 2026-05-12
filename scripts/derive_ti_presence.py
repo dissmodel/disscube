@@ -3,7 +3,7 @@ from disscube.models import SpatialSource, SpatialDerivation, Variable
 import os
 
 def main():
-    cube = CubeClient(catalog="catalog.json", store="./data/")
+    cube = CubeClient(catalog="catalog.db", store="./data/")
     
     # 1. Register Source
     ti_path = "zip://data/raw/terras_indigenas_funai_2010_limpo_poly_sirgas2000.zip"
