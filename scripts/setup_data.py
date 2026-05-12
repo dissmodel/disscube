@@ -89,6 +89,25 @@ cube.register_spatial_source(SpatialSource(
     crs="EPSG:5880"
 ))
 
+# Brazil Slope Source
+cube.register_spatial_source(SpatialSource(
+    id="slope_brazil",
+    name="Brazil Slope 250m",
+    format="raster",
+    asset_url="data/raw/decliv_sc_250_poly_sirgas2000.tif",
+    crs="EPSG:5880"
+))
+
+# Brazil 5km Grid
+cube.register_grid(GridSpec(
+    id="BR/5km",
+    type="local",
+    crs="EPSG:5880",
+    resolution=5000.0,
+    bbox=[2660000.0, 6035000.0, 7175000.0, 10710000.0],
+    description="Brazil 5km Grid (SIRGAS 2000 / Brazil Polyconic)"
+))
+
 print("\nCatalog prepared with existing data from ecosystem and BDC grids.")
 
 # 5. Example Derivation (Declarative)

@@ -19,28 +19,35 @@ class TestBDCMasterGrids(unittest.TestCase):
 
     @patch('fiona.open')
     def test_importer_creates_3_grids(self, mock_fiona):
-        # Mock fiona to return 2 tiles per size
+        # Mock fiona to return 2 tiles per size with valid geometry
         mock_src = MagicMock()
         mock_src.__enter__.return_value = [
-            {'properties': {'tile': '001001'}, 'geometry': {'type': 'Polygon', 'coordinates': []}},
-            {'properties': {'tile': '001002'}, 'geometry': {'type': 'Polygon', 'coordinates': []}}
+            {
+                'properties': {'tile': '001001'}, 
+                'geometry': {'type': 'Polygon', 'coordinates': [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
+            },
+            {
+                'properties': {'tile': '001002'}, 
+                'geometry': {'type': 'Polygon', 'coordinates': [[[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]]}
+            }
         ]
         mock_fiona.return_value = mock_src
 
         import_bdc_grids(self.cube, "sm.shp", "md.shp", "lg.shp")
 
-        # Verify 3 grids
+        # Verify 4 grids (SM, MD, LG, 100m)
         grids = self.cube.catalog.list_grids()
         grid_ids = [g.id for g in grids]
         self.assertIn("BDC_SM", grid_ids)
         self.assertIn("BDC_MD", grid_ids)
         self.assertIn("BDC_LG", grid_ids)
-        self.assertEqual(len(grids), 3)
+        self.assertIn("BDC_100m", grid_ids)
+        self.assertEqual(len(grids), 4)
 
         # Verify sources
         sources = self.cube.catalog.list_spatial_sources()
-        # 3 types * 2 tiles = 6 sources
-        self.assertEqual(len(sources), 6)
+        # 4 types * 2 tiles = 8 sources
+        self.assertEqual(len(sources), 8)
         source_ids = [s.id for s in sources]
         self.assertIn("BDC_SM_001001", source_ids)
         self.assertIn("BDC_LG_001002", source_ids)
