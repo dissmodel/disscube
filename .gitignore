@@ -19,8 +19,7 @@ htmlcov/
 disscube.egg-info/
 catalog.json
 test_catalog.json
-data/derived
-data/raw/decliv_sc_250_poly_sirgas2000.tif
+data
 outputs/
 
 # Build and Distribution
