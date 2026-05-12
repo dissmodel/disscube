@@ -1,39 +1,53 @@
+from disscube.models import GridSpec, SpatialSource
+from disscube.client import CubeClient
 import fiona
 from shapely.geometry import shape
-from disscube.models import GridSpec
-from disscube.client import CubeClient
 
 def import_bdc_grids(cube: CubeClient, sm_path: str, md_path: str, lg_path: str):
     """
-    Imports BDC tiles from shapefiles as 'reference' GridSpecs.
-    The resolution for BDC reference grids is the tile size in meters.
+    Imports BDC tiles as 'SpatialSources' linked to 3 master GridSpecs.
     """
     # BDC Albers Equal Area PROJ string
     bdc_crs = "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
     
+    # Brazil BBox in BDC Albers (approximate)
+    brazil_bbox = [2850000, 7150000, 7250000, 11000000]
+
     grid_configs = [
-        ('SM', sm_path, 105600.0),   # Tile size for Small
-        ('MD', md_path, 211200.0),   # Tile size for Medium
-        ('LG', lg_path, 422400.0)    # Tile size for Large
+        ('SM', sm_path, 10.0),   # 10m resolution
+        ('MD', md_path, 30.0),   # 30m resolution
+        ('LG', lg_path, 60.0)    # 60m resolution
     ]
     
-    for label, path, tile_size in grid_configs:
-        print(f"Importing BDC_{label} grids from {path}...")
+    for label, path, resolution in grid_configs:
+        grid_id = f"BDC_{label}"
+        print(f"Registering master grid {grid_id}...")
+        
+        master_grid = GridSpec(
+            id=grid_id,
+            type="reference",
+            crs=bdc_crs,
+            resolution=resolution,
+            bbox=brazil_bbox,
+            description=f"BDC {label} Master Grid (Brazil)"
+        )
+        cube.register_grid(master_grid)
+
+        print(f"Importing BDC_{label} tiles from {path} as sources...")
         with fiona.open(path) as src:
             for rec in src:
                 tile_id = rec['properties']['tile']
-                geom = shape(rec['geometry'])
-                bbox = list(geom.bounds)
-                
-                grid = GridSpec(
-                    id=f"BDC_{label}_{tile_id}",
-                    type="reference",
-                    crs=bdc_crs,
-                    resolution=tile_size,
-                    bbox=bbox,
-                    description=f"BDC {label} Grid Tile {tile_id}"
+                # Create a SpatialSource for each tile
+                # Note: asset_url here is a placeholder or should point to actual data
+                # In a real scenario, this would be the path to the BDC Zarr/COGS
+                source = SpatialSource(
+                    id=f"{grid_id}_{tile_id}",
+                    name=f"BDC {label} Tile {tile_id}",
+                    format="raster",
+                    asset_url=f"/data/bdc/{label}/{tile_id}.tif", # Example path
+                    crs=bdc_crs
                 )
-                cube.register_grid(grid)
+                cube.register_spatial_source(source)
         print(f"Finished BDC_{label}")
 
 if __name__ == "__main__":

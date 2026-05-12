@@ -30,6 +30,7 @@ class DerivedVariable(BaseModel):
     units: str | None = None
     derivation_id: str
     spec_hash: str
+    tile_id: str | None = None
     content_hash: str | None = None
     asset_url: str
 

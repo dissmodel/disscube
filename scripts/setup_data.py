@@ -23,7 +23,12 @@ if os.path.exists(ACRE_DATA):
     print("Copied Acre Vector (zip)")
 
 # 2. Initialize Cube
-cube = CubeClient(catalog="catalog.json", store="./data/")
+CATALOG_FILE = "catalog.json"
+if os.path.exists(CATALOG_FILE):
+    os.remove(CATALOG_FILE)
+    print(f"Removed old {CATALOG_FILE} to reset architecture.")
+
+cube = CubeClient(catalog=CATALOG_FILE, store="./data/")
 
 # 3. Register Grids
 # Acre Grid (matching disslucc resolution approx)

@@ -40,9 +40,16 @@ class CubeClient:
 
         spec_hash = derivation.spec_hash()
         
+        # Try to identify tile_id from source_id
+        tile_id = None
+        if derivation.grid_id.startswith("BDC_"):
+            parts = derivation.source_id.split("_")
+            if len(parts) >= 3:
+                tile_id = parts[-1]
+
         # Check cache and physical existence for ALL expected variables
         expected = {v.name for v in derivation.variables}
-        all_derived = self.catalog.search_derived_variables()
+        all_derived = self.catalog.search_derived_variables(tile_id=tile_id)
         cached_vars = [
             d for d in all_derived 
             if d.spec_hash == spec_hash and self.store.fs.exists(d.asset_url)
@@ -72,20 +79,27 @@ class CubeClient:
         for stage in pipeline:
             ctx = stage.execute(ctx)
             
-        return [d for d in self.catalog.search_derived_variables() if d.spec_hash == spec_hash]
+        return [
+            d for d in self.catalog.search_derived_variables(tile_id=tile_id) 
+            if d.spec_hash == spec_hash
+        ]
 
-    def load(self, variable_id: str) -> xr.DataArray:
+    def load(self, variable_id: str, tile_id: Optional[str] = None) -> xr.DataArray:
         # Search for derived variable
         # For simplicity, assuming variable_id is name or ID
-        derived = None
-        for d in self.catalog.search_derived_variables():
+        matches = []
+        for d in self.catalog.search_derived_variables(tile_id=tile_id):
             if d.id == variable_id or d.name == variable_id:
-                derived = d
-                break
+                matches.append(d)
         
-        if not derived:
+        if not matches:
             raise ValueError(f"Derived variable not found: {variable_id}")
             
+        if len(matches) > 1 and tile_id is None:
+            tile_ids = [m.tile_id for m in matches if m.tile_id]
+            raise ValueError(f"Multiple tiles found for {variable_id}: {tile_ids}. Please specify tile_id.")
+            
+        derived = matches[0]
         return xr.open_zarr(derived.asset_url)[derived.name]
 
     def to_lucc_data(self, variables: List[str], **kwargs) -> RasterBackend:
