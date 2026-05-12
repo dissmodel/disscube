@@ -5,6 +5,8 @@ ENV/
 
 outputs
 
+site
+
 # Python Cache
 __pycache__/
 **/*.py[cod]
