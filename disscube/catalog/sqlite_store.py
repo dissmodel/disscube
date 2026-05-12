@@ -134,5 +134,5 @@ class SqliteCatalogStore:
             row = conn.execute(
                 "SELECT data FROM relations WHERE source_grid_id = ? AND target_grid_id = ?",
                 (source_id, target_id)
-            )
+            ).fetchone()
             return SpatialRelation(**json.loads(row["data"])) if row else None
