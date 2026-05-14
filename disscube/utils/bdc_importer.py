@@ -10,8 +10,8 @@ def import_bdc_grids(cube: CubeClient, sm_path: str, md_path: str, lg_path: str)
     # BDC Albers Equal Area PROJ string
     bdc_crs = "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
     
-    # Brazil BBox in BDC Albers (approximate)
-    brazil_bbox = [2850000, 7150000, 7250000, 11000000]
+    # Brazil BBox in BDC Albers (full coverage including North and West)
+    brazil_bbox = [2400000, 7100000, 8200000, 12100000]
 
     grid_configs = [
         ('SM', sm_path, 10.0),   # 10m resolution

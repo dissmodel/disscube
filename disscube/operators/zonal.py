@@ -49,7 +49,12 @@ class ZonalAggregator:
             if "band" in data.dims:
                 data = data.isel(band=0)
             
+            # Use the variable name if provided, or preserve current name
+            name = variables[0].name if variables else data.name
+            if not name:
+                name = "variable"
+            
             # Convert single DataArray to Dataset for uniform writer handling
-            return data.transpose("y", "x").to_dataset()
+            return data.transpose("y", "x").to_dataset(name=name)
         
         return xr.Dataset(coords={"y": ys, "x": xs})
