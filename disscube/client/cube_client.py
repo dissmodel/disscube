@@ -95,31 +95,38 @@ class CubeClient:
             if d.spec_hash == spec_hash
         ]
 
-    def load(self, variable_id: str, tile_id: Optional[str] = None) -> xr.DataArray:
+    def load(self, variable_id: str, tile_id: Optional[str] = None, grid_id: Optional[str] = None) -> xr.DataArray:
         # Search for derived variable
         # For simplicity, assuming variable_id is name or ID
         matches = []
-        for d in self.catalog.search_derived_variables(tile_id=tile_id):
+        for d in self.catalog.search_derived_variables(tile_id=tile_id, grid_id=grid_id):
             if d.id == variable_id or d.name == variable_id:
                 matches.append(d)
         
         if not matches:
-            raise ValueError(f"Derived variable not found: {variable_id}")
+            msg = f"Derived variable not found: {variable_id}"
+            if grid_id: msg += f" on grid {grid_id}"
+            raise ValueError(msg)
             
         if len(matches) > 1 and tile_id is None:
+            # If multiple grids match and no grid_id was specified
+            if not grid_id:
+                grid_ids = list(set(m.grid_id for m in matches))
+                raise ValueError(f"Multiple grids found for {variable_id}: {grid_ids}. Please specify grid_id.")
+            
             tile_ids = [m.tile_id for m in matches if m.tile_id]
             raise ValueError(f"Multiple tiles found for {variable_id}: {tile_ids}. Please specify tile_id.")
             
         derived = matches[0]
         return xr.open_zarr(derived.asset_url)[derived.name]
 
-    def to_lucc_data(self, variables: List[str], **kwargs) -> RasterBackend:
+    def to_lucc_data(self, variables: List[str], grid_id: Optional[str] = None, **kwargs) -> RasterBackend:
         """
         Standard integration point for the DisSModel ecosystem.
         Returns a RasterBackend containing all requested variables as bands.
         """
         # Load all variables into a single Dataset
-        ds_list = [self.load(v) for v in variables]
+        ds_list = [self.load(v, grid_id=grid_id) for v in variables]
         
         # Extract CRS from the first variable before they are merged
         detected_crs = ds_list[0].attrs.get("crs")

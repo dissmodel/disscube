@@ -1,54 +1,53 @@
-
+import os
 from disscube.client import CubeClient
 from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
 
 cube = CubeClient(catalog="catalog.db", store="./data/")
 
-# 1. Registrar Grade do Acre (Métrica - 5km)
-grid_spec = GridSpec(
-    id="AC/5km-métrica",
-    type="local",
-    crs="EPSG:29101",
-    resolution=5000.0,
-    bbox=[-1875000.0, -1260000.0, -1050000.0, -815000.0],
-    description="Acre Metric Grid"
-)
-cube.register_grid(grid_spec)
+# 1. Use BR/5km as reference grid (National, BDC Albers)
+grid_id = "BR/5km"
+# Tiles covering Acre
+tiles = ['002006', '002007', '002008', '003007', '003008', '004007', '004008', '005007', '005008', '006008']
 
-# 2. Registrar Fonte Vetorial (Com o CRS correto)
+# 2. Register Source
+proj_acre = "+proj=poly +lat_0=0 +lon_0=-54 +x_0=0 +y_0=0 +ellps=aust_SA +units=m +no_defs"
+
+asset_path = "data/raw/acre_data.zip"
+if not os.path.exists(asset_path):
+    asset_path = "../disslucc-continuous/examples/data/input/csAC.zip"
+
 data_source = SpatialSource(
-    id="acre_base_metric",
-    name="Acre Vector Data Metric",
+    id="acre_base_bdc",
+    name="Acre Vector Data (for BDC alignment)",
     format="vector",
-    asset_url="../disslucc-continuous/examples/data/input/csAC.zip",
-    crs="EPSG:29101"
+    asset_url=asset_path,
+    crs=proj_acre
 )
 cube.register_spatial_source(data_source)
 
-# 3. Declarar Derivação
-derivation = SpatialDerivation(
-    source_id="acre_base_metric",
-    grid_id="AC/5km-métrica",
-    role="luc_observation",
-    variables=[
-        Variable(name="f", operator="attribute"),
-        Variable(name="d", operator="attribute")
-    ]
-)
+# 3. Process each tile on the National Grid
+variables_spec = [
+    Variable(name="f", operator="attribute"),
+    Variable(name="d", operator="attribute")
+]
 
-# 4. Executar
-print("Processando dados do Acre (vetor -> cubo)...")
-cube.derive(derivation)
+for tile_id in tiles:
+    print(f"\n>>> Processing Tile {tile_id} for {grid_id} (National Alignment)...")
+    derivation = SpatialDerivation(
+        source_id="acre_base_bdc",
+        grid_id=grid_id,
+        role="luc_observation",
+        variables=variables_spec
+    )
+    
+    try:
+        cube.derive(derivation, tile_id=tile_id)
+        print(f"Success for Tile {tile_id}")
+        
+        # Optional: Load and check
+        da_f = cube.load("f", tile_id=tile_id, grid_id=grid_id)
+        print(f"Tile {tile_id} variable 'f' shape: {da_f.shape}, mean: {da_f.mean().values:.4f}")
+    except Exception as e:
+        print(f"Error for Tile {tile_id}: {e}")
 
-# 5. Verificar resultado
-variables = ["f", "d"]
-print(f"Carregando do cubo: {variables}")
-backend = cube.to_lucc_data(variables) # Retorna RasterBackend por padrão
-
-print(f"Backend gerado: {backend.shape}")
-print(f"Bandas disponíveis: {backend.band_names()}")
-
-# Estatísticas rápidas
-for var in variables:
-    arr = backend.get(var)
-    print(f"Variável '{var}': min={arr.min()}, max={arr.max()}, mean={arr.mean():.4f}")
+print("\nAcre LUCC Tiled National Pipeline Finished.")

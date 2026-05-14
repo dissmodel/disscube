@@ -9,7 +9,11 @@ class Aggregator(PipelineStage):
         vars = ctx.derivation.variables
         data = ctx.data
         
-        results = {}
+        # Initial empty dataset with correct grid coords
+        final_ds = xr.Dataset(coords={"y": grid.ys, "x": grid.xs})
+        final_ds.rio.write_crs(grid.crs, inplace=True)
+        final_ds.rio.write_transform(grid.transform, inplace=True)
+
         for i, var in enumerate(vars):
             # Selection logic for multi-band DataArray
             var_data = data
@@ -33,12 +37,17 @@ class Aggregator(PipelineStage):
             else:
                 raise ValueError(f"Unknown operator: {var.operator}")
             
-            # Drop 'band' dimension if it exists to allow merging into Dataset
-            if "band" in res.coords:
-                res = res.drop_vars("band")
-            results[var.name] = res
+            # Merging result into final dataset
+            if isinstance(res, xr.Dataset):
+                # Only take the variable we were interested in if it contains many
+                if var.name in res.data_vars:
+                    final_ds[var.name] = res[var.name]
+                else:
+                    # If it returned a dataset but with different names, merge all
+                    final_ds = final_ds.merge(res, compat="override")
+            else:
+                # Assuming DataArray
+                final_ds[var.name] = res
         
-        # Merge all results into a single xarray Dataset
-        ds = xr.Dataset(results)
-        ctx.data = ds
+        ctx.data = final_ds
         return ctx

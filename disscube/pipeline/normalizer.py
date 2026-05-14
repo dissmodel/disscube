@@ -14,6 +14,9 @@ class Normalizer(PipelineStage):
         elif fmt == "vector":
             # For vector, we often need to load it to validate
             gdf = gpd.read_file(url)
+            # Inject CRS from source if available, as the file might have it wrong or missing
+            if ctx.source.crs:
+                gdf.crs = ctx.source.crs
             ctx.data = gdf
         else:
             raise ValueError(f"Unknown format: {fmt}")
