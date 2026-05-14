@@ -18,16 +18,23 @@ def main():
     cube.register_spatial_source(slope_source)
     print(f"Registered source: {slope_source.id}")
 
-    # 2. Register a Brazil 5km Grid
-    # We'll use the extent of the slope data but rounded to 5km alignment in EPSG:5880
-    # MinX: 2660000, MinY: 6035000, MaxX: 7175000, MaxY: 10710000
+    # 2. Register a Brazil 5km Grid aligned with BDC
+    # BDC Albers Equal Area CRS
+    # Expanded BBox to cover all Brazil and the slope data extent:
+    # MinX: 2400000 (Slope starts at 2.49M)
+    # MinY: 7100000 (BDC baseline)
+    # MaxX: 7400000 (Slope ends at 7.32M)
+    # MaxY: 12100000 (Slope ends at 12.03M)
+    bdc_crs = "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
+    bdc_bbox = [2400000, 7100000, 7400000, 12100000]
+
     brazil_5km = GridSpec(
         id="BR/5km",
         type="local",
-        crs="EPSG:5880",
+        crs=bdc_crs,
         resolution=5000.0,
-        bbox=[2660000.0, 6035000.0, 7175000.0, 10710000.0],
-        description="Brazil 5km Grid (SIRGAS 2000 / Brazil Polyconic)"
+        bbox=bdc_bbox,
+        description="Brazil 5km Grid (Aligned with BDC Albers, Full Extent)"
     )
     cube.register_grid(brazil_5km)
     print(f"Registered grid: {brazil_5km.id} ({brazil_5km.rows}x{brazil_5km.cols})")
