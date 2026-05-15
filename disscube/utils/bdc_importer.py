@@ -13,8 +13,11 @@ BDC_CRS = (
     " +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
 )
 
-# Full Brazil bbox in BDC Albers (used only as spatial envelope for tile grids)
-BRAZIL_BBOX = [2_400_000, 7_100_000, 8_200_000, 12_100_000]
+# Full Brazil bbox in BDC Albers, snapped to 5 km mesh.
+# Derived from IBGE official limits (lon -73.99→-28.84, lat -33.75→5.27)
+# reprojected to BDC Albers and aligned with floor/ceil to multiples of 5000 m.
+# Produces 866 rows × 1030 cols at 5 km resolution (~892 k cells).
+BRAZIL_BBOX = [2_720_000, 7_500_000, 7_870_000, 11_830_000]
 
 # Simulation grids available for LUCC models.
 # Resolution here is the TARGET pixel size of the derived product,
@@ -43,18 +46,19 @@ BDC_TILE_LEVELS = [
 # ---------------------------------------------------------------------------
 
 def import_bdc_grids(cube: CubeClient, sm_path: str, md_path: str, lg_path: str):
-    """Register BDC tile envelopes as SpatialSources in the DissCube catalog.
+    """Import BDC tiles and simulation grids into the DissCube catalog.
 
-    This function registers **only** BDC tile spatial envelopes
-    (``BDC_SM_001014``, …).  Each tile is a geographic container for raw
-    satellite scenes; it carries a bbox but no pixel resolution, because
-    that is a property of the image inside the tile, not of the tile itself.
+    Two distinct concepts are registered here:
 
-    Simulation GridSpecs (``BR/5km``, ``BR/1km``, ``BR/100m``) are
-    intentionally **not** registered here — they are owned by the catalog
-    setup script (``01_setup_catalog.py``) to avoid duplicate registration.
-    Call :func:`register_simulation_grids` directly if you need them
-    standalone.
+    1. **Simulation GridSpecs** (``BR/5km``, ``BR/1km``, ``BR/100m``) — define
+       the pixel resolution of *derived products* (LUCC model outputs).  These
+       are independent of any BDC tile level; the resolution refers to the
+       output raster, not to a satellite sensor.
+
+    2. **BDC tile SpatialSources** (``BDC_SM_001014``, …) — spatial envelopes
+       that describe where raw satellite scenes are located.  They carry a bbox
+       but no pixel resolution, because that is a property of the image inside
+       the tile, not of the tile itself.
 
     Parameters
     ----------
@@ -63,6 +67,7 @@ def import_bdc_grids(cube: CubeClient, sm_path: str, md_path: str, lg_path: str)
     sm_path, md_path, lg_path:
         Paths to the BDC SM / MD / LG shapefiles (``BDC_SM_V2.shp``, …).
     """
+    register_simulation_grids(cube)
     paths = {"sm_path": sm_path, "md_path": md_path, "lg_path": lg_path}
     _register_tile_sources(cube, paths)
 
@@ -72,16 +77,7 @@ def import_bdc_grids(cube: CubeClient, sm_path: str, md_path: str, lg_path: str)
 # ---------------------------------------------------------------------------
 
 def register_simulation_grids(cube: CubeClient) -> None:
-    """Register national simulation grids into the DissCube catalog.
-
-    Registers ``BR/5km``, ``BR/1km``, and ``BR/100m`` GridSpecs covering
-    all of Brazil in BDC Albers.  The ``resolution`` field is the pixel
-    size of the *derived product* (LUCC model output) — completely
-    independent of the native sensor resolution inside any BDC tile.
-
-    Call this once from the catalog setup script.  Do **not** call from
-    :func:`import_bdc_grids` to avoid duplicate registration.
-    """
+    """Register national simulation grids (pixel resolution of derived output)."""
     for grid_id, resolution, description in SIMULATION_GRIDS:
         grid = GridSpec(
             id=grid_id,
@@ -215,24 +211,3 @@ def register_state_grid(
     return grid
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
-    cube = CubeClient(catalog="catalog.db", store="./data/")
-
-    import_bdc_grids(
-        cube,
-        sm_path="/tmp/bdc_grids/SM/BDC_SM_V2.shp",
-        md_path="/tmp/bdc_grids/MD/BDC_MD_V2.shp",
-        lg_path="/tmp/bdc_grids/LG/BDC_LG_V2.shp",
-    )
-
-    # Register Acre at 5 km — snapped to national mesh
-    register_state_grid(
-        cube,
-        state="AC",
-        bbox_geo=(-74.0, -11.2, -66.5, -7.1),
-        resolution=5_000.0,
-    )

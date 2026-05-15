@@ -21,11 +21,7 @@ import shutil
 
 from disscube.client import CubeClient
 from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
-from disscube.utils.bdc_importer import (
-    import_bdc_grids,
-    register_simulation_grids,
-    register_state_grid,
-)
+from disscube.utils.bdc_importer import import_bdc_grids, register_state_grid
 
 # ---------------------------------------------------------------------------
 # 1. Paths
@@ -61,9 +57,6 @@ _copy_if_exists(ACRE_SRC,     ACRE_DST)
 # ---------------------------------------------------------------------------
 
 CATALOG_FILE = "catalog.db"
-if os.path.exists(CATALOG_FILE):
-    os.remove(CATALOG_FILE)
-    print(f"\n=== 2. Removed old {CATALOG_FILE} ===")
 
 cube = CubeClient(catalog=CATALOG_FILE, store="./data/")
 
@@ -84,10 +77,24 @@ print("\n=== 3. Registering simulation grids ===")
 
 BDC_CRS     = ("+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22"
                " +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs")
+BRAZIL_BBOX = [2_400_000.0, 7_100_000.0, 8_200_000.0, 12_100_000.0]
 
-# National grids (BR/5km, BR/1km, BR/100m) — single source of truth in bdc_importer.
-# GridSpec.resolution = pixel size of the DERIVED PRODUCT, not sensor resolution.
-register_simulation_grids(cube)
+# National grids (BDC Albers, type="reference")
+for grid_id, res, desc in [
+    ("BR/5km",  5_000.0, "Grade nacional — 5 km, BDC Albers"),
+    ("BR/1km",  1_000.0, "Grade nacional — 1 km, BDC Albers"),
+    ("BR/100m",   100.0, "Grade nacional — 100 m, BDC Albers"),
+]:
+    g = GridSpec(
+        id=grid_id,
+        type="reference",
+        crs=BDC_CRS,
+        resolution=res,
+        bbox=BRAZIL_BBOX,
+        description=desc,
+    )
+    cube.register_grid(g)
+    print(f"  [grid] {grid_id:12s}  {g.rows} rows × {g.cols} cols")
 
 # Maranhão local grid — 100 m pixels, SIRGAS 2000 / UTM zone 23S
 # bbox covers Ilha do Maranhão; refine after inspecting the actual TIFF
@@ -151,15 +158,18 @@ cube.register_spatial_source(SpatialSource(
 ))
 print("  [source] acre_base")
 
-# Optional auxiliary sources — registered only if files are present
+def _check_path(url: str) -> str:
+    """Strip protocol prefixes (zip://, file://) so os.path.exists() works."""
+    for prefix in ("zip://", "file://"):
+        if url.startswith(prefix):
+            return url[len(prefix):]
+    return url
+
+
+# Optional auxiliary sources — registered only if files are present.
+# asset_url may use protocol prefixes (zip://) recognised by fiona/rasterio;
+# _check_path strips them for the filesystem existence check.
 _aux = [
-    (
-        "urban_centers",
-        "Urban Centers (PNLT)",
-        "data/raw/urban_center/centros_urbanos_m_100_pnlt_poly_sirgas2000.shp",
-        "vector",
-        "EPSG:5880",
-    ),
     (
         "slope_brazil",
         "Brazil Slope 250 m",
@@ -167,8 +177,20 @@ _aux = [
         "raster",
         "EPSG:5880",
     ),
-
-    # rios_pnlt estava faltando — urban_centers já está lá como aux
+    (
+        "terras_indigenas",
+        "Terras Indígenas FUNAI 2010",
+        "zip://data/raw/terras_indigenas_funai_2010_limpo_poly_sirgas2000.zip",
+        "vector",
+        "EPSG:5880",
+    ),
+    (
+        "urban_centers",
+        "Urban Centers (PNLT)",
+        "data/raw/urban_center/centros_urbanos_m_100_pnlt_poly_sirgas2000.shp",
+        "vector",
+        "EPSG:5880",
+    ),
     (
         "rios_pnlt",
         "Rivers PNLT",
@@ -178,13 +200,13 @@ _aux = [
     ),
 ]
 for src_id, name, url, fmt, crs in _aux:
-    if os.path.exists(url):
+    if os.path.exists(_check_path(url)):
         cube.register_spatial_source(
             SpatialSource(id=src_id, name=name, format=fmt, asset_url=url, crs=crs)
         )
         print(f"  [source] {src_id}")
     else:
-        print(f"  [warn]   {src_id} skipped — file not found: {url}")
+        print(f"  [warn]   {src_id} skipped — file not found: {_check_path(url)}")
 
 # ---------------------------------------------------------------------------
 # 6. Example derivation spec (declarative — not yet executed)
