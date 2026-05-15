@@ -21,7 +21,7 @@ import shutil
 
 from disscube.client import CubeClient
 from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
-from disscube.utils.bdc_importer import import_bdc_grids, register_state_grid
+from disscube.utils.bdc_importer import import_bdc_grids, register_state_grid, register_simulation_grids
 
 # ---------------------------------------------------------------------------
 # 1. Paths
@@ -77,33 +77,15 @@ print("\n=== 3. Registering simulation grids ===")
 
 BDC_CRS     = ("+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22"
                " +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs")
-BRAZIL_BBOX = [2_400_000.0, 7_100_000.0, 8_200_000.0, 12_100_000.0]
+BRAZIL_BBOX = [2_720_000, 7_500_000, 7_870_000, 11_830_000]
+register_simulation_grids(cube)
 
-# National grids (BDC Albers, type="reference")
-for grid_id, res, desc in [
-    ("BR/5km",  5_000.0, "Grade nacional — 5 km, BDC Albers"),
-    ("BR/1km",  1_000.0, "Grade nacional — 1 km, BDC Albers"),
-    ("BR/100m",   100.0, "Grade nacional — 100 m, BDC Albers"),
-]:
-    g = GridSpec(
-        id=grid_id,
-        type="reference",
-        crs=BDC_CRS,
-        resolution=res,
-        bbox=BRAZIL_BBOX,
-        description=desc,
-    )
-    cube.register_grid(g)
-    print(f"  [grid] {grid_id:12s}  {g.rows} rows × {g.cols} cols")
-
-# Maranhão local grid — 100 m pixels, SIRGAS 2000 / UTM zone 23S
-# bbox covers Ilha do Maranhão; refine after inspecting the actual TIFF
 cube.register_grid(GridSpec(
     id="MA/100m",
     type="local",
     crs="EPSG:31983",
     resolution=100.0,
-    bbox=[490_000.0, 9_680_000.0, 590_000.0, 9_760_000.0],
+    bbox=[568_900.0, 9_692_800.0, 609_400.0, 9_734_700.0],
     description="Ilha do Maranhão — 100 m pixels, SIRGAS 2000 / UTM 23S",
 ))
 print(f"  [grid] MA/100m       (local, UTM 23S)")
@@ -118,21 +100,7 @@ register_state_grid(
     resolution=5_000.0,
 )
 
-# ---------------------------------------------------------------------------
-# 4. Register BDC tile shapefiles as SpatialSources
-#
-# import_bdc_grids (corrected version) registers tiles ONLY as SpatialSource
-# (spatial envelope with bbox). Simulation grids are already registered above.
-# No overlap, no duplicate BR/5km registration.
-# ---------------------------------------------------------------------------
 
-print("\n=== 4. Registering BDC tile sources ===")
-import_bdc_grids(
-    cube,
-    sm_path="zip://data/bdc_grids/BDC_SM_V2.zip",
-    md_path="zip://data/bdc_grids/BDC_MD_V2.zip",
-    lg_path="zip://data/bdc_grids/BDC_LG_V2.zip",
-)
 
 # ---------------------------------------------------------------------------
 # 5. Register raw data sources
