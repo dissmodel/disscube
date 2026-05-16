@@ -21,7 +21,8 @@ import shutil
 
 from disscube.client import CubeClient
 from disscube.models import GridSpec, SpatialSource, SpatialDerivation, Variable
-from disscube.utils.bdc_importer import import_bdc_grids, register_state_grid, register_simulation_grids
+from disscube.utils.bdc_importer import import_bdc_grids
+from disscube.utils.grids import register_local_grid, register_simulation_grids
 
 # ---------------------------------------------------------------------------
 # 1. Paths
