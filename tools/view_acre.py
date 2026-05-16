@@ -26,7 +26,7 @@ import geopandas as gpd
 # Map of grid_id to default CRS for export fallback
 GRID_CRS = {
     "AC/5km-métrica": "EPSG:29101",
-    "BRAZIL/5km": "EPSG:5880"
+    "BR/5km": "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
 }
 
 for derived in results:
