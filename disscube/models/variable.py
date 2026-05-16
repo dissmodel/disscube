@@ -4,10 +4,12 @@ from typing import Literal
 from pydantic import BaseModel
 from .grid import SpatialRelation
 
+
 class Variable(BaseModel):
     name: str
     operator: str
     class_code: int | None = None
+
 
 class SpatialSource(BaseModel):
     id: str
@@ -16,9 +18,11 @@ class SpatialSource(BaseModel):
     asset_url: str
     checksum: str | None = None
     crs: str
+    bbox: list[float] | None = None
     time: int | None = None
     tags: list[str] = []
     band_map: dict[str, int] = {}  # variable_name -> band_index (1-based), optional
+
 
 class DerivedVariable(BaseModel):
     id: str
@@ -30,8 +34,10 @@ class DerivedVariable(BaseModel):
     units: str | None = None
     derivation_id: str
     spec_hash: str
+    tile_id: str | None = None
     content_hash: str | None = None
     asset_url: str
+
 
 class SpatialDerivation(BaseModel):
     source_id: str
@@ -40,27 +46,49 @@ class SpatialDerivation(BaseModel):
     variables: list[Variable]
     relations: list[SpatialRelation] = []
 
+    # Temporal validity window — both None means the variable is static.
+    # ISO 8601 date strings ("2000-01-01") or year strings ("2000") are accepted.
+    # Two derivations with different valid_from/valid_until produce different
+    # spec_hashes, ensuring reproducibility of temporal derives.
+    valid_from:  str | None = None
+    valid_until: str | None = None
+
     def spec_hash(self) -> str:
         """
         Deterministic SHA-256 hash of the derivation spec.
+
+        Includes ``valid_from`` and ``valid_until`` so that derives for
+        different time periods are always treated as distinct products.
+        A static derivation (both None) hashes differently from any
+        temporal derivation.
         """
         variables_data = [
             v.model_dump() for v in sorted(self.variables, key=lambda x: x.name)
         ]
-        
+
         relations_data = []
-        for r in sorted(self.relations, key=lambda x: (x.source_grid_id, x.target_grid_id, x.strategy)):
+        for r in sorted(
+            self.relations,
+            key=lambda x: (x.source_grid_id, x.target_grid_id, x.strategy),
+        ):
             r_dict = r.model_dump()
             r_dict.pop("metadata", None)
             relations_data.append(r_dict)
 
         relevant_data = {
-            "source_id": self.source_id,
-            "grid_id": self.grid_id,
-            "role": self.role,
-            "variables": variables_data,
-            "relations": relations_data
+            "source_id":   self.source_id,
+            "grid_id":     self.grid_id,
+            "role":        self.role,
+            "variables":   variables_data,
+            "relations":   relations_data,
+            "valid_from":  self.valid_from,   # None for static variables
+            "valid_until": self.valid_until,  # None for static variables
         }
-        
+
         encoded = json.dumps(relevant_data, sort_keys=True, ensure_ascii=False).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
+
+    @property
+    def is_temporal(self) -> bool:
+        """Return True if this derivation covers a specific time window."""
+        return self.valid_from is not None or self.valid_until is not None

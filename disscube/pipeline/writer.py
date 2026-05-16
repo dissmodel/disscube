@@ -15,6 +15,14 @@ class VariableWriter(PipelineStage):
         derivation = ctx.derivation
         spec_hash = derivation.spec_hash()
         
+        # Extract tile_id: prioritize context, then fallback to source_id pattern
+        tile_id = ctx.tile_id
+        if not tile_id and grid.id.startswith("BDC_"):
+            # Expecting source.id like "BDC_LG_009002"
+            parts = ctx.source.id.split("_")
+            if len(parts) >= 3:
+                tile_id = parts[-1]
+
         # Save each variable to Zarr
         for var_name in ds.data_vars:
             da = ds[var_name]
@@ -27,10 +35,14 @@ class VariableWriter(PipelineStage):
             da.attrs["grid_id"] = grid.id
             da.attrs["role"] = derivation.role
             da.attrs["spec_hash"] = spec_hash
+            if tile_id:
+                da.attrs["tile_id"] = tile_id
             if "spatial_ref" in da.coords:
                 da.attrs["crs"] = grid.crs
             
-            relative_path = f"derived/{spec_hash}/{var_name}.zarr"
+            # Storage path: derived/{grid_id}/{tile_id or 'global'}/{spec_hash}/{var_name}.zarr
+            partition = tile_id if tile_id else "global"
+            relative_path = f"derived/{grid.id}/{partition}/{spec_hash}/{var_name}.zarr"
             full_path = self.storage.get_full_path(relative_path)
             
             # Save as dataset to preserve all coordinates (including spatial_ref)
@@ -40,15 +52,34 @@ class VariableWriter(PipelineStage):
             content_hash = self._calculate_dir_hash(full_path)
             
             # Register in catalog
+            derived_id = f"{spec_hash}_{var_name}"
+            if tile_id:
+                derived_id = f"{spec_hash}_{tile_id}_{var_name}"
+
+            # Determine temporal markers. 
+            # If the source has an explicit time, use it.
+            # Otherwise, use the valid_from from the derivation (converted to int if possible).
+            times = []
+            if ctx.source.time is not None:
+                times = [ctx.source.time]
+            elif derivation.valid_from is not None:
+                try:
+                    # Try to extract year as integer
+                    times = [int(derivation.valid_from)]
+                except ValueError:
+                    # Fallback to list of 0 or other logic if non-integer dates are used
+                    pass
+
             derived = DerivedVariable(
-                id=f"{spec_hash}_{var_name}",
+                id=derived_id,
                 name=var_name,
                 grid_id=grid.id,
                 role=derivation.role,
-                times=[ctx.source.time] if ctx.source.time is not None else [],
+                times=times,
                 dtype=str(da.dtype),
                 derivation_id=spec_hash,
                 spec_hash=spec_hash,
+                tile_id=tile_id,
                 content_hash=content_hash,
                 asset_url=full_path
             )

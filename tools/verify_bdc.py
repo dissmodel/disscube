@@ -46,14 +46,13 @@ def generate_tile_tif(grid_id, cube, output_path):
     print(f"Generated: {output_path}")
 
 if __name__ == "__main__":
-    cube = CubeClient(catalog="catalog.json", store="./data/")
+    cube = CubeClient(catalog="catalog.db", store="./data/")
     
-    # Selected hierarchy found during research:
-    # LG: 000003 -> MD: 000007 -> SM: 001014
+    # Selected master grids for verification:
     tiles = [
-        "BDC_LG_000003",
-        "BDC_MD_000007",
-        "BDC_SM_001014"
+        "BDC_LG",
+        "BDC_MD",
+        "BDC_SM"
     ]
     
     for t in tiles:
