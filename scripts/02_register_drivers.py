@@ -96,10 +96,26 @@ derivation_dist = SpatialDerivation(
     variables=[
         Variable(name="dist_cidades", operator="min_distance"),
     ],
+    valid_from="2000",
+    valid_until="2014"
 )
 print(f"  [derive] spec_hash: {derivation_dist.spec_hash()}")
 cube.derive(derivation_dist)
-print("  [derive] dist_cidades done")
+print("  [derive] dist_cidades done until 2014")
+
+derivation_dist = SpatialDerivation(
+    source_id="urban_centers",
+    grid_id=GRID_ID,
+    role="driver",
+    variables=[
+        Variable(name="dist_cidades", operator="min_distance"),
+    ],
+    valid_from="2015",
+    valid_until="2025"
+)
+print(f"  [derive] spec_hash: {derivation_dist.spec_hash()}")
+cube.derive(derivation_dist)
+print("  [derive] dist_cidades done from 2015 until 2025")
 
 # ---------------------------------------------------------------------------
 # 4. Distância a rios — vector, min_distance

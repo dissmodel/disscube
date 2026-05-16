@@ -56,12 +56,26 @@ class VariableWriter(PipelineStage):
             if tile_id:
                 derived_id = f"{spec_hash}_{tile_id}_{var_name}"
 
+            # Determine temporal markers. 
+            # If the source has an explicit time, use it.
+            # Otherwise, use the valid_from from the derivation (converted to int if possible).
+            times = []
+            if ctx.source.time is not None:
+                times = [ctx.source.time]
+            elif derivation.valid_from is not None:
+                try:
+                    # Try to extract year as integer
+                    times = [int(derivation.valid_from)]
+                except ValueError:
+                    # Fallback to list of 0 or other logic if non-integer dates are used
+                    pass
+
             derived = DerivedVariable(
                 id=derived_id,
                 name=var_name,
                 grid_id=grid.id,
                 role=derivation.role,
-                times=[ctx.source.time] if ctx.source.time is not None else [],
+                times=times,
                 dtype=str(da.dtype),
                 derivation_id=spec_hash,
                 spec_hash=spec_hash,
