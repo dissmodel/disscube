@@ -11,6 +11,8 @@ DisSCube is a high-performance spatial data cube engine designed for land change
     - **Raster**: Majority, Mean, Max, Min, and Sum resampling.
     - **Vector**: Presence (Boolean), Count, and area-weighted strategies.
     - **Proximity**: High-performance Euclidean distance transforms.
+- **Temporal Backend**: Support for multi-period variables. Derived products can have temporal validity windows, allowing models to load dynamic drivers.
+- **Snapped Grids**: Automatic alignment of local grids (e.g., State-level) to national meshes (e.g., BDC 5km) to ensure pixel-perfect interoperability.
 - **Master Grid Architecture**: Native support for **Brazil Data Cube (BDC)** master grids (SM, MD, LG) and custom 100m grids with tiled processing.
 - **SQLite Catalog**: High-performance, concurrent registry for spatial metadata and variable provenance.
 - **Multidimensional Storage**: Uses **Zarr** and **Xarray** for efficient storage of high-resolution spatial variables.
@@ -39,22 +41,17 @@ graph LR
     end
 ```
 
-### 2. Master Grid & Tiled Processing
-Instead of treating each BDC tile as a separate grid, DisSCube uses **Master Grids** (continental scale) and partitions the execution using **Tile IDs**. This allows for massive scalability and consistent resolution across the country.
+### 2. Temporal Awareness
+Derivations can be associated with a time window. `to_lucc_data` automatically stacks these fatias into a 3D DataArray `(time, y, x)`, allowing CA models to query drivers by year.
 
 ```mermaid
-grid diagram
-    subgraph "Master Grid (e.g., BDC_LG 60m)"
-        direction TB
-        T1[Tile 001]
-        T2[Tile 002]
-        T3[Tile 003]
-        T4[Tile 004]
-    end
-    T1 --> Z1[Zarr Partition 1]
-    T2 --> Z2[Zarr Partition 2]
-    T3 --> Z3[Zarr Partition 3]
-    T4 --> Z4[Zarr Partition 4]
+graph TD
+    D1[Derivation 2000-2010] --> VW
+    D2[Derivation 2011-2025] --> VW
+    VW --> DB[(Catalog)]
+    DB --> LC[to_lucc_data]
+    LC --> RB[RasterBackend]
+    RB --> CA[Cellular Automata Model]
 ```
 
 ### 3. Entity Model
@@ -73,23 +70,27 @@ classDiagram
         +format: raster|vector
         +asset_url: str
         +bbox: list
+        +time: int?
+    }
+    class SpatialDerivation {
+        +source_id: str
+        +grid_id: str
+        +valid_from: str?
+        +valid_until: str?
+        +spec_hash() str
     }
     class DerivedVariable {
         +id: str
         +grid_id: str
         +tile_id: str
         +spec_hash: str
+        +times: list[int]
         +asset_url: str
-    }
-    class SpatialRelation {
-        +source_grid_id: str
-        +target_grid_id: str
-        +strategy: simple|keepinboth
     }
     
     GridSpec "1" -- "0..*" DerivedVariable : defines space
     SpatialSource "1" -- "0..*" DerivedVariable : raw material
-    GridSpec "1" -- "0..*" SpatialRelation : relates to
+    SpatialDerivation "1" -- "0..*" DerivedVariable : generates
 ```
 
 ## 📖 Quick Start
