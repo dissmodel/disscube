@@ -50,7 +50,7 @@ derivation = SpatialDerivation(
 
 # ── 5. Pipeline ──────────────────────────────────────────────────────────────
 # Normalizer  → abre TIF só para validar (lazy, não carrega)
-# GridAligner → reproject EPSG:4326 → BDC Albers, Resampling.mode, 455×450
+# GridAligner → reproject EPSG:4326 → BDC Albers, Resampling.mode, 459, 460
 # Aggregator  → ZonalAggregator, raster banda única → Dataset("uso_2022")
 # Writer      → salva Zarr + content_hash + registra DerivedVariable no catálogo
 derived = cube.derive(derivation)
@@ -63,3 +63,19 @@ import numpy as np
 print("Shape:", da.shape)           # esperado: (459, 460)
 print("dtype:", da.dtype)           # float64 (devido ao rioxarray/NaNs)
 print("Classes presentes:", np.unique(da.values))
+
+# ── 7. Integração com DisSModel ──────────────────────────────────────────────
+# O método to_lucc_data retorna um RasterBackend do ecossistema dissmodel.
+# Isso permite que os dados do cubo sejam usados diretamente em modelos de
+# mudança de uso da terra (ex: TerraME).
+backend = cube.to_lucc_data(["uso_2022"], grid_id="ilha_maranhao/100m")
+
+print("\n=== Integração DisSModel ===")
+print(f"Backend: {backend}")
+print(f"Variáveis registradas: {backend.band_names()}")
+
+# O backend do dissmodel armazena os dados como arrays NumPy prontos para uso.
+# Para variáveis estáticas, o acesso é direto via .get(nome)
+data_uso = backend.get("uso_2022")
+print(f"Shape do array no backend: {data_uso.shape}")
+
