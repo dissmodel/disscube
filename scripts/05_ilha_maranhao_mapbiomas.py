@@ -53,21 +53,36 @@ for year in years:
     print(f"\n[pipeline] Processando ano {year}...")
     cube.derive(derivation)
 
-# ── 4. Carregamento do Cubo Temporal ─────────────────────────────────────────
-# Ao carregar "uso", o Cubo detecta que existem múltiplos anos e retorna (time, y, x)
-da = cube.load("uso", grid_id="ilha_maranhao/100m")
-print("\n=== Dados Temporais no Xarray ===")
-print(da)
-print(f"Dimensões: {da.dims}")
-print(f"Coordenadas de tempo: {da.coords['time'].values}")
+# ── 4. Distância a Sedes (Variável Estática) ─────────────────────────────────
+derivation_sedes = SpatialDerivation(
+    source_id="urban_centers",
+    grid_id="ilha_maranhao/100m",
+    role="driver",
+    variables=[
+        Variable(name="dist_sedes", operator="min_distance"),
+    ],
+)
+print("\n[pipeline] Processando distância a sedes...")
+cube.derive(derivation_sedes)
 
-# ── 5. Integração com DisSModel (Backend Temporal) ───────────────────────────
-# O backend resultante terá um eixo de tempo configurado automaticamente.
-backend = cube.to_lucc_data(["uso"], grid_id="ilha_maranhao/100m")
+# ── 5. Carregamento do Cubo ──────────────────────────────────────────────────
+# Ao carregar "uso", o Cubo detecta que existem múltiplos anos e retorna (time, y, x)
+da_uso = cube.load("uso", grid_id="ilha_maranhao/100m")
+print("\n=== Dados Temporais (uso) ===")
+print(da_uso.dims, da_uso.coords["time"].values)
+
+# Ao carregar "dist_sedes", ele retorna (y, x) por ser estática
+da_sedes = cube.load("dist_sedes", grid_id="ilha_maranhao/100m")
+print("\n=== Dados Estáticos (dist_sedes) ===")
+print(da_sedes.dims, da_sedes.shape)
+
+# ── 6. Integração com DisSModel (Backend Misto) ──────────────────────────────
+# O backend resultante terá um eixo de tempo para "uso" e será estático para "dist_sedes"
+backend = cube.to_lucc_data(["uso", "dist_sedes"], grid_id="ilha_maranhao/100m")
 
 print("\n=== Integração DisSModel Temporal ===")
 print(f"Backend: {backend}")
-print(f"É temporal? {backend.is_temporal('uso')}")
+print(f"É temporal? uso={backend.is_temporal('uso')}, dist_sedes={backend.is_temporal('dist_sedes')}")
 
 # No dissmodel, você pode acessar um ano específico do backend
 data_2010 = backend.get("uso", time=2010)
