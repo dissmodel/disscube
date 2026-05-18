@@ -2,6 +2,7 @@ from disscube.client import CubeClient
 from disscube.models import SpatialSource, SpatialDerivation
 from disscube.models.variable import Variable
 from disscube.utils.grids import register_local_grid
+import os
 
 # ── 1. Cliente ───────────────────────────────────────────────────────────────
 cube = CubeClient(
@@ -9,73 +10,74 @@ cube = CubeClient(
     store="data/",
 )
 
-# ── 2. Grade local snapped na malha BDC 100m ─────────────────────────────────
-# bbox_geo vem dos bounds reais do arquivo, com pequena folga
-# O snap vai produzir: [6062500, 11008700, 6108500, 11054600] em BDC Albers
-# Grid resultante: 459 linhas × 460 colunas = 211.140 células
+# ── 2. Grade local ───────────────────────────────────────────────────────────
 grid = register_local_grid(
     cube,
     name="ilha_maranhao",
-    bbox_geo=(-44.42, -2.80, -44.02, -2.40),  # lon_min, lat_min, lon_max, lat_max
+    bbox_geo=(-44.42, -2.80, -44.02, -2.40),
     resolution=100,
     snap=True,
 )
-# grid.id == "ilha_maranhao/100m"
 
-# ── 3. Fonte bruta ───────────────────────────────────────────────────────────
-# nodata=None no arquivo — MapBiomas usa 0 como "sem classificação"
-# Declaramos crs e deixamos bbox=None (o GridAligner usa a bbox da grade)
-source = SpatialSource(
-    id="mapbiomas_ilha_ma_2022",
-    name="MapBiomas Ilha do Maranhão — Coleção 2022",
-    format="raster",
-    asset_url="data/raw/ilha_maranhao_mapbiomas_2022.tif",
-    crs="EPSG:4326",
-    time=2022,           # entra em DerivedVariable.times=[2022]
-    band_map={},         # banda única — sem necessidade de mapeamento
-)
-cube.register_spatial_source(source)
+# ── 3. Processamento Temporal (Loop de Anos) ─────────────────────────────────
+# Para MapBiomas, geralmente temos uma série temporal. 
+# Aqui exemplificamos como registrar e derivar múltiplos anos.
 
-# ── 4. Derivação ─────────────────────────────────────────────────────────────
-# operator="majority" → Resampling.mode no GridAligner (correto para categórico)
-# valid_from/valid_until=None → variável estática; o ano vem de source.time
-derivation = SpatialDerivation(
-    source_id="mapbiomas_ilha_ma_2022",
-    grid_id="ilha_maranhao/100m",
-    role="land_use",
-    variables=[
-        Variable(name="uso_2022", operator="majority"),
-    ],
-)
+years = [2010, 2022]
+for year in years:
+    asset = f"data/raw/ilha_maranhao_mapbiomas_{year}.tif"
+    
+    # Registro da Fonte
+    source_id = f"mapbiomas_ilha_ma_{year}"
+    source = SpatialSource(
+        id=source_id,
+        name=f"MapBiomas Ilha do Maranhão — {year}",
+        format="raster",
+        asset_url=asset,
+        crs="EPSG:4326",
+        time=year,           # Define este dado como temporal no cubo
+    )
+    cube.register_spatial_source(source)
 
-# ── 5. Pipeline ──────────────────────────────────────────────────────────────
-# Normalizer  → abre TIF só para validar (lazy, não carrega)
-# GridAligner → reproject EPSG:4326 → BDC Albers, Resampling.mode, 459, 460
-# Aggregator  → ZonalAggregator, raster banda única → Dataset("uso_2022")
-# Writer      → salva Zarr + content_hash + registra DerivedVariable no catálogo
-derived = cube.derive(derivation)
-print(derived[0])
+    # Registro da Derivação
+    # O spec_hash será diferente para cada ano pois o source_id muda
+    derivation = SpatialDerivation(
+        source_id=source_id,
+        grid_id="ilha_maranhao/100m",
+        role="land_use",
+        variables=[
+            Variable(name="uso", operator="majority"),
+        ],
+    )
+    
+    print(f"\n[pipeline] Processando ano {year}...")
+    cube.derive(derivation)
 
-# ── 6. Inspeciona resultado ──────────────────────────────────────────────────
-da = cube.load("uso_2022", grid_id="ilha_maranhao/100m")
+# ── 4. Carregamento do Cubo Temporal ─────────────────────────────────────────
+# Ao carregar "uso", o Cubo detecta que existem múltiplos anos e retorna (time, y, x)
+da = cube.load("uso", grid_id="ilha_maranhao/100m")
+print("\n=== Dados Temporais no Xarray ===")
 print(da)
-import numpy as np
-print("Shape:", da.shape)           # esperado: (459, 460)
-print("dtype:", da.dtype)           # float64 (devido ao rioxarray/NaNs)
-print("Classes presentes:", np.unique(da.values))
+print(f"Dimensões: {da.dims}")
+print(f"Coordenadas de tempo: {da.coords['time'].values}")
 
-# ── 7. Integração com DisSModel ──────────────────────────────────────────────
-# O método to_lucc_data retorna um RasterBackend do ecossistema dissmodel.
-# Isso permite que os dados do cubo sejam usados diretamente em modelos de
-# mudança de uso da terra (ex: TerraME).
-backend = cube.to_lucc_data(["uso_2022"], grid_id="ilha_maranhao/100m")
+# ── 5. Integração com DisSModel (Backend Temporal) ───────────────────────────
+# O backend resultante terá um eixo de tempo configurado automaticamente.
+backend = cube.to_lucc_data(["uso"], grid_id="ilha_maranhao/100m")
 
-print("\n=== Integração DisSModel ===")
+print("\n=== Integração DisSModel Temporal ===")
 print(f"Backend: {backend}")
-print(f"Variáveis registradas: {backend.band_names()}")
+print(f"É temporal? {backend.is_temporal('uso')}")
 
-# O backend do dissmodel armazena os dados como arrays NumPy prontos para uso.
-# Para variáveis estáticas, o acesso é direto via .get(nome)
-data_uso = backend.get("uso_2022")
-print(f"Shape do array no backend: {data_uso.shape}")
+# No dissmodel, você pode acessar um ano específico do backend
+data_2010 = backend.get("uso", time=2010)
+print(f"Shape do slice de 2010: {data_2010.shape}")
+
+# Ou filtrar um período específico na carga do cubo
+backend_filtered = cube.to_lucc_data(
+    ["uso"], 
+    grid_id="ilha_maranhao/100m", 
+    period=(2022, 2022)
+)
+print(f"Anos no backend filtrado: {backend_filtered.temporal_band_names()}")
 
