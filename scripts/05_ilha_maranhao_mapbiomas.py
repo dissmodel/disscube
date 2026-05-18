@@ -11,8 +11,8 @@ cube = CubeClient(
 
 # ── 2. Grade local snapped na malha BDC 100m ─────────────────────────────────
 # bbox_geo vem dos bounds reais do arquivo, com pequena folga
-# O snap vai produzir: [6063200, 11008800, 6108200, 11054300] em BDC Albers
-# Grid resultante: 455 linhas × 450 colunas = 204.750 células
+# O snap vai produzir: [6062500, 11008700, 6108500, 11054600] em BDC Albers
+# Grid resultante: 459 linhas × 460 colunas = 211.140 células
 grid = register_local_grid(
     cube,
     name="ilha_maranhao",
@@ -59,6 +59,7 @@ print(derived[0])
 # ── 6. Inspeciona resultado ──────────────────────────────────────────────────
 da = cube.load("uso_2022", grid_id="ilha_maranhao/100m")
 print(da)
-print("Shape:", da.shape)           # esperado: (455, 450)
-print("dtype:", da.dtype)           # uint8
-print("Classes presentes:", sorted(set(da.values.flatten().tolist())))
+import numpy as np
+print("Shape:", da.shape)           # esperado: (459, 460)
+print("dtype:", da.dtype)           # float64 (devido ao rioxarray/NaNs)
+print("Classes presentes:", np.unique(da.values))
