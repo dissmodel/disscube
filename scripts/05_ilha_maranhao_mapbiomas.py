@@ -41,7 +41,7 @@ cube.register_spatial_source(source)
 # valid_from/valid_until=None → variável estática; o ano vem de source.time
 derivation = SpatialDerivation(
     source_id="mapbiomas_ilha_ma_2022",
-    grid_id="ilha_maranhao/0km",
+    grid_id="ilha_maranhao/100m",
     role="land_use",
     variables=[
         Variable(name="uso_2022", operator="majority"),
@@ -57,7 +57,7 @@ derived = cube.derive(derivation)
 print(derived[0])
 
 # ── 6. Inspeciona resultado ──────────────────────────────────────────────────
-da = cube.load("uso_2022", grid_id="ilha_maranhao/0km")
+da = cube.load("uso_2022", grid_id="ilha_maranhao/100m")
 print(da)
 print("Shape:", da.shape)           # esperado: (455, 450)
 print("dtype:", da.dtype)           # uint8
