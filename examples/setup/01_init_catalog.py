@@ -30,20 +30,24 @@ register_local_grid(
     snap=True,
 )
 
-# Acre state grid (BDC Albers, snapped to 5km mesh)
+# Acre state grids (BDC Albers, snapped)
+# Using the exact geographic bounds derived from data/raw/acre_sel.gpkg
+acre_bbox = (-73.9868097, -11.1455615, -66.6235942, -7.1130573)
+
 register_local_grid(
     cube,
-    name="AC",
-    bbox_geo=(-74.0, -11.2, -66.5, -7.1),
+    state="AC",
+    bbox_geo=acre_bbox,
     resolution=5_000.0,
+    snap=True,
 )
 
-# Acre state grid (BDC Albers, snapped to 1km mesh)
 register_local_grid(
     cube,
-    name="AC",
-    bbox_geo=(-74.0, -11.2, -66.5, -7.1),
+    state="AC",
+    bbox_geo=acre_bbox,
     resolution=1_000.0,
+    snap=True,
 )
 
 print("\n=== Catalog bootstrap complete ===")

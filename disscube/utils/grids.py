@@ -7,6 +7,11 @@ from disscube.client import CubeClient
 # Master Grid Constants (Brazil Data Cube Standard)
 # ---------------------------------------------------------------------------
 
+# EPSG:10857 is the official code for BDC Albers (SIRGAS 2000 / Brazil Albers
+# Equal Area Conic), registered in 2023. Using it instead of a raw proj4 string
+# ensures QGIS and other tools recognise the CRS automatically without requiring
+# manual configuration or a custom CRS entry.
+#BDC_CRS = "EPSG:10857"
 BDC_CRS = (
     "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22"
     " +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
@@ -51,15 +56,15 @@ def register_local_grid(
 ) -> GridSpec:
     """
     Register a local simulation grid snapped to the national mesh.
-    
-    This ensures that any Area of Interest (AOI) has pixels that align 
-    perfectly with the national master grids, enabling interoperability 
+
+    This ensures that any Area of Interest (AOI) has pixels that align
+    perfectly with the national master grids, enabling interoperability
     without resampling.
     """
     name = name or state
     if not name:
         raise ValueError("Either 'name' or 'state' must be provided.")
-    
+
     if bbox_geo is None:
         raise ValueError("'bbox_geo' must be provided.")
 
