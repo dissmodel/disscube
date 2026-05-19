@@ -25,21 +25,24 @@ class ZonalAggregator:
                 
                 if op == "presence":
                     val = var.class_code if var.class_code is not None else 1
-                    shapes = ((geom, val) for geom in data.geometry if geom is not None)
+                    shapes = [(geom, val) for geom in data.geometry if geom is not None]
                 elif column and column in data.columns:
-                    valid_mask = data.geometry.notnull()
-                    shapes = zip(data.geometry[valid_mask], data[column][valid_mask])
+                    valid_mask = (data.geometry.notnull()) & (data[column].notnull())
+                    shapes = list(zip(data.geometry[valid_mask], data[column][valid_mask]))
                 else:
                     val = var.class_code if var.class_code is not None else 1
-                    shapes = ((geom, val) for geom in data.geometry if geom is not None)
+                    shapes = [(geom, val) for geom in data.geometry if geom is not None]
                 
-                raster = rasterio.features.rasterize(
-                    shapes,
-                    out_shape=(rows, cols),
-                    transform=transform,
-                    fill=0,
-                    all_touched=True
-                )
+                if not shapes:
+                    raster = np.zeros((rows, cols), dtype=np.float32)
+                else:
+                    raster = rasterio.features.rasterize(
+                        shapes,
+                        out_shape=(rows, cols),
+                        transform=transform,
+                        fill=0,
+                        all_touched=False
+                    )
                 
                 ds[var.name] = (("y", "x"), raster)
             
