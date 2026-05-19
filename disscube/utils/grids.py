@@ -19,7 +19,6 @@ BRAZIL_BBOX = [2_720_000, 7_500_000, 7_870_000, 11_830_000]
 SIMULATION_GRIDS = [
     ("BR/5km",  5_000.0,  "National LUCC grid — 5 km pixels, BDC Albers"),
     ("BR/1km",  1_000.0,  "National LUCC grid — 1 km pixels, BDC Albers"),
-    ("BR/100m",   100.0,  "National coastal/fine grid — 100 m pixels, BDC Albers"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -44,8 +43,9 @@ def register_simulation_grids(cube: CubeClient) -> None:
 
 def register_local_grid(
     cube: CubeClient,
-    name: str,
-    bbox_geo: tuple[float, float, float, float],
+    name: str | None = None,
+    state: str | None = None,
+    bbox_geo: tuple[float, float, float, float] | None = None,
     resolution: float = 5_000.0,
     snap: bool = True,
 ) -> GridSpec:
@@ -56,6 +56,13 @@ def register_local_grid(
     perfectly with the national master grids, enabling interoperability 
     without resampling.
     """
+    name = name or state
+    if not name:
+        raise ValueError("Either 'name' or 'state' must be provided.")
+    
+    if bbox_geo is None:
+        raise ValueError("'bbox_geo' must be provided.")
+
     transformer = Transformer.from_crs("EPSG:4326", BDC_CRS, always_xy=True)
 
     corners = [
@@ -74,7 +81,8 @@ def register_local_grid(
         maxx = math.ceil(maxx  / resolution) * resolution
         maxy = math.ceil(maxy  / resolution) * resolution
 
-    if resolution >= 1000 and resolution % 1000 == 0:
+    is_km = resolution >= 1000 and math.isclose(resolution % 1000, 0, abs_tol=1e-5)
+    if is_km:
         res_str = f"{int(resolution // 1000)}km"
     else:
         res_str = f"{int(resolution)}m"
