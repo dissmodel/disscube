@@ -43,10 +43,16 @@ STANDARD_SOURCES = {
         "crs": "EPSG:31983",
     },
     "acre_base": {
-        "name": "Acre — vector Polyconic",
-        "url": "data/raw/acre_data.zip",
+        # CRS note: the original csAC.shp carried a malformed .prj declaring
+        # SAD69 Polyconic with lon_0=-54, false_easting=5000000,
+        # false_northing=10000000 — none of which matched the actual data.
+        # The correct parameters are lon_0=-57, x_0=0, y_0=0 (GRS67 ellipsoid).
+        # This source uses the reprojected file in SIRGAS2000 (EPSG:4674)
+        # to avoid any datum transformation ambiguity in the derive pipeline.
+        "name": "Acre — vector SIRGAS2000 (corrigido)",
+        "url": "data/raw/csAC_SIRGAS2000.gpkg",
         "format": "vector",
-        "crs": "+proj=poly +lat_0=0 +lon_0=-54 +x_0=0 +y_0=0 +ellps=aust_SA +towgs84=-67.35,3.88,-38.22,0,0,0,0 +units=m +no_defs",
+        "crs": "EPSG:4674",
     },
     "slope_brazil": {
         "name": "Brazil Slope 250 m",
@@ -79,10 +85,10 @@ STANDARD_SOURCES = {
 if __name__ == "__main__":
     # 1. External research folders (adjust to your local environment)
     BRMANGUE_SRC = "../brmangue-dissmodel/examples/data/input/ilha_maranhao_epsg31983.tif"
-    ACRE_SRC     = "../disslucc-continuous/examples/data/input/csAC.zip"
+    ACRE_SRC     = "../disslucc-continuous/examples/data/input/csAC_SIRGAS2000.gpkg"
 
     BRMANGUE_DST = "data/raw/ilha_maranhao.tif"
-    ACRE_DST     = "data/raw/acre_data.zip"
+    ACRE_DST     = "data/raw/csAC_SIRGAS2000.gpkg"
 
     print("=== 1. Copying raw data (if available) ===")
     copy_if_exists(BRMANGUE_SRC, BRMANGUE_DST)
@@ -90,11 +96,11 @@ if __name__ == "__main__":
 
     # 2. Register Sources
     cube = CubeClient(catalog="catalog.db", store="./data/")
-    
+
     print("\n=== 2. Registering standard spatial sources ===")
     for src_id, meta in STANDARD_SOURCES.items():
         local_path = check_path(meta["url"])
-        
+
         if os.path.exists(local_path):
             source = SpatialSource(
                 id=src_id,
