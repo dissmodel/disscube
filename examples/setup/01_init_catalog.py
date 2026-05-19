@@ -21,17 +21,6 @@ register_simulation_grids(cube)
 
 print("\n=== 2. Registering local grids ===")
 
-cube.register_grid(GridSpec(
-    id="MA/100m",
-    type="local",
-    crs="EPSG:31983",
-    resolution=100.0,
-    bbox=[568_900.0, 9_692_800.0, 609_400.0, 9_734_700.0],
-    description="Ilha do Maranhão — 100 m pixels, SIRGAS 2000 / UTM 23S",
-))
-print(f"  [grid] MA/100m       (local, UTM 23S)")
-
-
 # Ilha do Maranhão (BDC Albers, snapped to 100m mesh)
 register_local_grid(
     cube,
@@ -42,19 +31,22 @@ register_local_grid(
 )
 
 # Acre state grid (BDC Albers, snapped to 5km mesh)
+# Note: Data bounds are approx (-71.16, -10.91) to (-63.51, -7.27)
 register_local_grid(
     cube,
-    name="AC",
-    bbox_geo=(-74.0, -11.2, -66.5, -7.1),
+    state="AC",
+    bbox_geo=(-74.0, -11.5, -63.0, -7.0),
     resolution=5_000.0,
+    snap=True,
 )
 
 # Acre state grid (BDC Albers, snapped to 1km mesh)
 register_local_grid(
     cube,
-    name="AC",
-    bbox_geo=(-74.0, -11.2, -66.5, -7.1),
+    state="AC",
+    bbox_geo=(-74.0, -11.5, -63.0, -7.0),
     resolution=1_000.0,
+    snap=True,
 )
 
 print("\n=== Catalog bootstrap complete ===")

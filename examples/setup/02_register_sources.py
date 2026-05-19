@@ -43,10 +43,10 @@ STANDARD_SOURCES = {
         "crs": "EPSG:31983",
     },
     "acre_base": {
-        "name": "Acre — vector EPSG:4326",
+        "name": "Acre — vector Polyconic",
         "url": "data/raw/acre_data.zip",
         "format": "vector",
-        "crs": "EPSG:4326",
+        "crs": "+proj=poly +lat_0=0 +lon_0=-54 +x_0=0 +y_0=0 +ellps=aust_SA +towgs84=-67.35,3.88,-38.22,0,0,0,0 +units=m +no_defs",
     },
     "slope_brazil": {
         "name": "Brazil Slope 250 m",
