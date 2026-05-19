@@ -11,7 +11,11 @@ from disscube.client import CubeClient
 # Equal Area Conic), registered in 2023. Using it instead of a raw proj4 string
 # ensures QGIS and other tools recognise the CRS automatically without requiring
 # manual configuration or a custom CRS entry.
-BDC_CRS = "EPSG:10857"
+#BDC_CRS = "EPSG:10857"
+BDC_CRS = (
+    "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22"
+    " +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
+)
 
 # Full Brazil bbox in BDC Albers, snapped to 5 km mesh.
 BRAZIL_BBOX = [2_720_000, 7_500_000, 7_870_000, 11_830_000]
