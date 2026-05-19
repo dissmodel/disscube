@@ -74,7 +74,12 @@ def register_local_grid(
         maxx = math.ceil(maxx  / resolution) * resolution
         maxy = math.ceil(maxy  / resolution) * resolution
 
-    grid_id = f"{name}/{resolution / 1000:.0f}km"
+    if resolution >= 1000 and resolution % 1000 == 0:
+        res_str = f"{int(resolution // 1000)}km"
+    else:
+        res_str = f"{int(resolution)}m"
+
+    grid_id = f"{name}/{res_str}"
     grid = GridSpec(
         id=grid_id,
         type="reference",
