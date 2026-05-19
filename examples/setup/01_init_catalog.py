@@ -30,21 +30,22 @@ register_local_grid(
     snap=True,
 )
 
-# Acre state grid (BDC Albers, snapped to 5km mesh)
-# Note: Data bounds are approx (-71.16, -10.91) to (-63.51, -7.27)
+# Acre state grids (BDC Albers, snapped)
+# Using the exact geographic bounds derived from data/raw/acre_sel.gpkg
+acre_bbox = (-73.9868097, -11.1455615, -66.6235942, -7.1130573)
+
 register_local_grid(
     cube,
     state="AC",
-    bbox_geo=(-74.0, -11.5, -63.0, -7.0),
+    bbox_geo=acre_bbox,
     resolution=5_000.0,
     snap=True,
 )
 
-# Acre state grid (BDC Albers, snapped to 1km mesh)
 register_local_grid(
     cube,
     state="AC",
-    bbox_geo=(-74.0, -11.5, -63.0, -7.0),
+    bbox_geo=acre_bbox,
     resolution=1_000.0,
     snap=True,
 )
