@@ -94,7 +94,7 @@ print(f"  [grid] MA/100m       (local, UTM 23S)")
 # Acre state grid — 5 km pixels, BDC Albers, snapped to national 5 km mesh.
 # register_state_grid reprojects the geographic bbox to BDC Albers and
 # snaps minx/miny/maxx/maxy to the nearest multiple of 5000 m.
-register_state_grid(
+register_local_grid(
     cube,
     state="AC",
     bbox_geo=(-74.0, -11.2, -66.5, -7.1),
