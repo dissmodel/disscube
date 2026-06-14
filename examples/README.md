@@ -16,7 +16,7 @@ Derive variables on the national 5 km mesh.
 
 ### 3. Case Study: BR-MANGUE (Maranhão)
 - `python examples/case_studies/brmangue/01_derive.py`: Derives land use and environmental variables at 100 m.
-- `python examples/case_studies/brmangue/02_simulate.py`: Runs the BrmangueExecutor.
+- `python examples/case_studies/brmangue/02_simulate.py`: Runs the BrmangueRasterExecutor.
 - `python examples/case_studies/brmangue/03_temporal_mapbiomas.py`: Demonstrates temporal MapBiomas integration.
 
 ### 4. Case Study: LUCC/AC (Acre)
