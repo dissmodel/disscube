@@ -11,7 +11,7 @@ from disscube.client import CubeClient
 from disscube.models import SpatialDerivation, Variable
 
 
-GRID_ID   = "MA/100m"
+GRID_ID   = "ilha_maranhao/100m"
 SOURCE_ID = "maranhao_base"
 cube = CubeClient(catalog="catalog.db", store="./data/")
 

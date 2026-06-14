@@ -1,34 +1,95 @@
 """
-Operator plugin registry for disscube.
+Operator plugin system for disscube.
 
-Maps each operator name to its metadata: which requirements must be satisfied
-at Derivation construction time (fail-fast validation before any I/O).
+Every operator is a concrete subclass of ``Operator``.  Defining ``name``
+on the subclass is the only registration step required — ``__init_subclass__``
+inserts it into ``OPERATOR_REGISTRY`` automatically.
+
+Adding a new operator:
+1. Create a subclass of ``Operator`` anywhere that is imported at startup.
+2. Set ``name`` and override ``resampling()`` / ``compute()`` as needed.
+3. No changes to Aggregator or any other pipeline stage are required.
 """
 
-from typing import TypedDict
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, ClassVar
+
+import numpy as np
+import xarray as xr
+from rasterio.warp import Resampling
+
+if TYPE_CHECKING:
+    import geopandas as gpd
+    from disscube.models.grid import GridSpec
+    from disscube.models.variable import Variable
+
+# Maps operator name → Operator subclass.  Populated automatically.
+OPERATOR_REGISTRY: dict[str, type[Operator]] = {}
 
 
-class OperatorMeta(TypedDict):
-    requires_class_code: bool
+class Operator:
+    """
+    Base class for all disscube derivation operators.
 
+    Subclasses register themselves into ``OPERATOR_REGISTRY`` the moment the
+    class body is executed (via ``__init_subclass__``), so there is no
+    separate registration call.
 
-# Single source of truth for valid operator names and their constraints.
-# The Aggregator (pipeline/aggregator.py) dispatches by the same names;
-# adding an operator here AND in the Aggregator's dispatch block is the
-# complete registration pattern.
-OPERATOR_REGISTRY: dict[str, OperatorMeta] = {
-    # ── Zonal operators (window-based aggregates over raster / vector data) ──
-    "mean":       {"requires_class_code": False},
-    "sum":        {"requires_class_code": False},
-    "std":        {"requires_class_code": False},
-    "min":        {"requires_class_code": False},
-    "max":        {"requires_class_code": False},
-    "majority":   {"requires_class_code": False},
-    "minority":   {"requires_class_code": False},
-    "percentage": {"requires_class_code": True},   # class_code selects the target class
-    "attribute":  {"requires_class_code": False},
-    "presence":   {"requires_class_code": False},
-    # ── Proximity operators (distance / density to features) ─────────────────
-    "min_distance": {"requires_class_code": False},
-    "count":        {"requires_class_code": False},
-}
+    Parameters (class-level)
+    ------------------------
+    name : str
+        Unique operator identifier used in ``Variable.operator`` and
+        ``OPERATOR_REGISTRY``.
+    requires_class_code : bool
+        When ``True``, ``Derivation`` enforces that ``class_code`` is set
+        at construction time (fail-fast validation).
+    _resampling : Resampling
+        Default rasterio resampling method used by ``GridAligner`` for
+        raster sources.  Override in subclasses to match the operator's
+        aggregation semantics.
+    """
+
+    name: ClassVar[str]
+    requires_class_code: ClassVar[bool] = False
+    _resampling: ClassVar[Resampling] = Resampling.nearest
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        if hasattr(cls, "name") and isinstance(cls.name, str):
+            OPERATOR_REGISTRY[cls.name] = cls
+
+    @classmethod
+    def resampling(cls) -> Resampling:
+        """Rasterio resampling method for ``GridAligner``."""
+        return cls._resampling
+
+    def compute(
+        self,
+        data: "xr.DataArray | gpd.GeoDataFrame",
+        var: "Variable",
+        grid: "GridSpec",
+    ) -> xr.DataArray:
+        """
+        Derive a single variable from aligned source data.
+
+        Parameters
+        ----------
+        data : xr.DataArray | geopandas.GeoDataFrame
+            Source already reprojected and clipped to ``grid`` extent.
+            ``DataArray`` for raster sources; ``GeoDataFrame`` for vectors.
+        var : Variable
+            Operator name and optional ``class_code`` for this variable.
+        grid : GridSpec
+            Target grid — provides ``rows``, ``cols``, ``transform``,
+            ``xs``, ``ys``, ``resolution``, and ``bbox``.
+
+        Returns
+        -------
+        xr.DataArray
+            Shape ``(rows, cols)`` with dims ``("y", "x")`` and coords
+            matching ``grid.ys`` / ``grid.xs``.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__}.compute() is not implemented"
+        )

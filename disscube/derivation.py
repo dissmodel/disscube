@@ -81,7 +81,7 @@ class Derivation(BaseModel):
                 f"Available operators: {available}"
             )
         meta = OPERATOR_REGISTRY[self.operator]
-        if meta["requires_class_code"] and self.class_code is None:
+        if meta.requires_class_code and self.class_code is None:
             raise ValueError(
                 f"Operator {self.operator!r} requires class_code to be set."
             )
