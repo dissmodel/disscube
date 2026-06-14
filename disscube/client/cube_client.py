@@ -90,6 +90,29 @@ class CubeClient:
             if d.spec_hash == spec_hash
         ]
 
+    def derive_declarative(
+        self,
+        derivation: "Derivation",  # noqa: F821 — imported lazily to avoid circular refs
+        grid_id: str,
+        tile_id: Optional[str] = None,
+    ) -> List[DerivedVariable]:
+        """
+        Thin convenience wrapper: build a ``SpatialDerivation`` from a
+        declarative ``Derivation`` and call the existing ``derive()`` pipeline.
+
+        No new execution logic is introduced here.
+
+        Parameters
+        ----------
+        derivation : Derivation
+            Declarative description of the derivation intent.
+        grid_id : str
+            Target grid identifier.
+        tile_id : str | None
+            Optional tile sub-identifier, forwarded to ``derive()``.
+        """
+        return self.derive(derivation.to_spatial_derivation(grid_id), tile_id=tile_id)
+
     def load(
         self,
         variable_id: str,
