@@ -23,10 +23,15 @@ loud errors rather than silent downstream corruption.
 from __future__ import annotations
 
 import logging
+
+import rioxarray  # noqa: F401 — registers the .rio accessor
 import xarray as xr
 import geopandas as gpd
+from pyproj import CRS as ProjCRS
+from rasterio.warp import Resampling
 from shapely.geometry import box
 
+from disscube.operators.base import OPERATOR_REGISTRY
 from disscube.pipeline import PipelineStage, PipelineContext
 from disscube.models.grid import GridSpec
 from disscube.models.variable import Variable
@@ -48,7 +53,13 @@ class GridAligner(PipelineStage):
             )
         elif fmt == "vector":
             gdf: gpd.GeoDataFrame = ctx.data
-            if str(gdf.crs) != str(grid.crs):
+            try:
+                needs_reproject = not ProjCRS.from_user_input(gdf.crs).equals(
+                    ProjCRS.from_user_input(grid.crs)
+                )
+            except Exception:
+                needs_reproject = str(gdf.crs) != str(grid.crs)
+            if needs_reproject:
                 gdf = gdf.to_crs(grid.crs)
             gdf = gdf.clip(box(*grid.bbox))
             ctx.data = gdf
@@ -69,9 +80,10 @@ class GridAligner(PipelineStage):
         """
         Reproject and resample the source raster for each variable.
 
-        Returns an ``xr.Dataset`` with one data variable per ``Variable`` in
-        ``variables``, each resampled with the method appropriate for its
-        operator (e.g. ``mode`` for ``majority``, ``average`` for ``mean``).
+        Returns an ``xr.Dataset`` with one data variable per ``Variable``,
+        each resampled with the method appropriate for its operator
+        (e.g. ``Resampling.mode`` for ``majority``,
+        ``Resampling.average`` for ``mean``).
 
         Parameters
         ----------
@@ -84,11 +96,7 @@ class GridAligner(PipelineStage):
         band_map : dict[str, int]
             Optional ``{variable_name: 1-based band index}`` from the source.
         """
-        import rioxarray  # noqa: F401 — registers the .rio accessor
-        from disscube.operators.base import OPERATOR_REGISTRY
-
-        ds_src = __import__("rioxarray").open_rasterio(url)
-
+        ds_src = rioxarray.open_rasterio(url)
         result = xr.Dataset(coords={"y": grid.ys, "x": grid.xs})
 
         for i, var in enumerate(variables):
@@ -116,9 +124,9 @@ class GridAligner(PipelineStage):
 
             # ── Per-operator resampling method ─────────────────────────
             op_cls = OPERATOR_REGISTRY.get(var.operator)
-            resampling = op_cls.resampling() if op_cls else __import__(
-                "rasterio.warp", fromlist=["Resampling"]
-            ).Resampling.nearest
+            resampling: Resampling = (
+                op_cls.resampling() if op_cls else Resampling.nearest
+            )
 
             # ── Reproject to target grid ───────────────────────────────
             aligned = band.rio.reproject(

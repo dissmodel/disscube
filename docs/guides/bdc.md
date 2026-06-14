@@ -1,30 +1,129 @@
-# Brazil Data Cube Integration
+# Integração com Brazil Data Cube
 
-DisSCube provides first-class support for the **Brazil Data Cube (BDC)** hierarchical grid system.
+## Grades BDC e tiles
 
-## Master Grids vs. Tiles
+O Brazil Data Cube (BDC) particionam o Brasil em tiles hierárquicos. DisSCube representa isso com:
 
-The BDC partitions Brazil into tiles. In DisSCube, we represent this using **Master Grids** (the resolution definition) and **Spatial Sources** (the individual tiles).
+- **Master Grid**: definição de resolução e CRS para todo o país.
+- **Tiles**: `SpatialSource` com o `bbox` de cada partição.
 
-### Available Master Grids
-- `BDC_SM`: 10m resolution (Small tiles).
-- `BDC_MD`: 30m resolution (Medium tiles).
-- `BDC_LG`: 60m resolution (Large tiles).
-- `BDC_100m`: 100m custom resolution (Continental scale).
+## Registrar grades e tiles BDC
 
-## Tiled Derivation
-
-When you run a derivation, you specify the `tile_id`. DisSCube performs the following steps:
-
-1. **Lookup**: Finds the BBOX of the tile in the catalog.
-2. **Crop**: Restricts the Master Grid to that specific BBOX.
-3. **Process**: Executes the operators only for that area.
-4. **Partition**: Saves the Zarr file in a directory named after the tile.
-
-This approach allows you to process a single tile for testing or iterate through all tiles of Brazil using a simple loop, without ever hitting memory limits.
+O utilitário `bdc_importer` cria as master grids e registra cada tile como `SpatialSource`:
 
 ```python
-# Processing multiple tiles in a loop
-for tile in ["008013", "008014", "008015"]:
-    cube.derive(my_derivation, tile_id=tile)
+from disscube.utils.bdc_importer import import_bdc_grids
+
+import_bdc_grids(
+    cube,
+    sm_shp="data/bdc_grids/BDC_SM_V2.shp",
+    md_shp="data/bdc_grids/BDC_MD_V2.shp",
+    lg_shp="data/bdc_grids/BDC_LG_V2.shp",
+)
+```
+
+Isso registra as master grids e cada tile como `SpatialSource` com `bbox` preenchido.
+
+## Derivação por tile
+
+```python
+from disscube.models import SpatialDerivation, Variable
+
+derivation = SpatialDerivation(
+    source_id="slope_brazil",
+    grid_id="BR/5km",
+    role="driver",
+    variables=[Variable(name="slope", operator="mean")],
+)
+
+# Processar um tile
+cube.derive(derivation, tile_id="009002")
+
+# Processar todos os tiles em loop
+tiles = [s for s in cube.catalog.list_spatial_sources() if s.id.startswith("BR/5km_")]
+for tile_source in tiles:
+    tile_id = tile_source.id.split("_")[-1]
+    cube.derive(derivation, tile_id=tile_id)
+```
+
+Cada tile é processado de forma independente e pode ser paralelizado.
+
+## Carregar resultado tileado
+
+```python
+# Tile específico
+da = cube.load("slope", tile_id="009002")
+
+# Todos os tiles da grade (mosaico automático)
+da = cube.load("slope", grid_id="BR/5km")
+```
+
+## Grade 100m nacional
+
+Para projetos que precisam de resolução mais alta que BDC_SM (10m), DisSCube suporta uma grade de 100m customizada:
+
+```python
+from disscube.utils.grids import register_local_grid
+
+grid_100m = register_local_grid(
+    cube,
+    name="BR",
+    bbox_geo=(-73.98, -33.75, -28.65, 5.27),  # bbox do Brasil em WGS84
+    resolution=100.0,
+    snap=True,
+)
+```
+
+## Fluxo completo: setup → derivação → carregamento
+
+```python
+from disscube.client import CubeClient
+from disscube.models import SpatialSource, SpatialDerivation, Variable
+
+cube = CubeClient(catalog="catalog.db", store="./data/")
+
+# 1. Fonte
+cube.register_spatial_source(SpatialSource(
+    id="urban_centers",
+    name="Centros Urbanos PNLT",
+    format="vector",
+    asset_url="data/raw/urban_centers.shp",
+    crs="EPSG:5880",
+))
+
+# 2. Derivação — distância a centros urbanos em BR/5km
+derivation = SpatialDerivation(
+    source_id="urban_centers",
+    grid_id="BR/5km",
+    role="driver",
+    variables=[Variable(name="dist_cidades", operator="min_distance")],
+    valid_from="2000",
+    valid_until="2014",
+)
+
+# 3. Executar para um tile
+cube.derive(derivation, tile_id="009002")
+
+# 4. Carregar
+da = cube.load("dist_cidades", tile_id="009002")
+print(da.shape)   # (rows, cols)
+```
+
+## Variáveis temporais com tiles
+
+Para drivers com variação temporal, derive múltiplos períodos e carregue como série:
+
+```python
+for start, end in [("2000", "2014"), ("2015", "2025")]:
+    cube.derive(SpatialDerivation(
+        source_id="urban_centers",
+        grid_id="BR/5km",
+        role="driver",
+        variables=[Variable(name="dist_cidades", operator="min_distance")],
+        valid_from=start, valid_until=end,
+    ))
+
+# Carrega série temporal (time, y, x)
+da = cube.load("dist_cidades", grid_id="BR/5km")
+print(da.dims)   # ('time', 'y', 'x')
 ```
