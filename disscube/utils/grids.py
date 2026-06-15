@@ -1,7 +1,10 @@
+import logging
 import math
 from pyproj import Transformer
 from disscube.models import GridSpec
 from disscube.client import CubeClient
+
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Master Grid Constants (Brazil Data Cube Standard)
@@ -42,8 +45,8 @@ def register_simulation_grids(cube: CubeClient) -> None:
             description=description,
         )
         cube.register_grid(grid)
-        print(f"  [grid] registered {grid_id!r}  ({resolution:.0f} m pixels, "
-              f"{grid.rows} rows × {grid.cols} cols)")
+        log.info("[grid] registered %r  (%d m pixels, %d rows × %d cols)",
+                 grid_id, int(resolution), grid.rows, grid.cols)
 
 
 def register_local_grid(
@@ -108,12 +111,12 @@ def register_local_grid(
     lon_min, lat_min = back.transform(minx, miny)
     lon_max, lat_max = back.transform(maxx, maxy)
 
-    print(
-        f"\n[grid] registered {grid_id!r}\n"
-        f"  bbox (BDC Albers): [{minx:.0f}, {miny:.0f}, {maxx:.0f}, {maxy:.0f}]\n"
-        f"  bbox (geographic): lon [{lon_min:.2f}, {lon_max:.2f}]  "
-        f"lat [{lat_min:.2f}, {lat_max:.2f}]\n"
-        f"  size: {grid.rows} rows × {grid.cols} cols = "
-        f"{grid.rows * grid.cols:,} cells  ({resolution:.0f} m pixels)"
+    log.info(
+        "[grid] registered %r  bbox(BDC Albers)=[%.0f, %.0f, %.0f, %.0f]"
+        "  bbox(geo)=lon[%.2f,%.2f] lat[%.2f,%.2f]"
+        "  size=%d×%d cells  (%.0f m pixels)",
+        grid_id, minx, miny, maxx, maxy,
+        lon_min, lon_max, lat_min, lat_max,
+        grid.rows, grid.cols, resolution,
     )
     return grid

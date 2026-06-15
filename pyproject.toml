@@ -17,21 +17,18 @@ dependencies = [
     "zarr",
     "rasterio",
     "geopandas",
-    "rasterstats",
     "shapely",
     "scipy",
     "numpy",
     "pandas",
     "pyproj",
     "fsspec",
-    "s3fs",
-    "typer",
-    "fastapi",
-    "uvicorn",
-    "python-multipart",
     "toml",
     "rioxarray",
     "affine",
+    "fastapi",
+    "uvicorn",
+    "dissmodel>=0.6.0,<0.7.0",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +36,15 @@ dev = [
     "pytest",
     "pytest-cov",
     "ipykernel",
+]
+bdc = [
+    "fiona",
+]
+s3 = [
+    "s3fs",
+]
+api = [
+    "python-multipart",
 ]
 
 [tool.setuptools.packages.find]

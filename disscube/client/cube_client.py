@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+import logging
 from typing import Optional, List, Any
 import os
 import numpy as np
 import xarray as xr
-from dissmodel.geo.raster.backend import RasterBackend
 from disscube.catalog.sqlite_store import SqliteCatalogStore
+
+log = logging.getLogger(__name__)
 from disscube.storage import AssetStore
 from disscube.models import GridSpec, SpatialSource, SpatialDerivation, DerivedVariable, SpatialRelation
 from disscube.pipeline import PipelineContext
@@ -157,8 +161,6 @@ class CubeClient:
                 da = xr.open_zarr(d.asset_url)[d.name]
                 slices.append(da)
                 time_coords.extend(d.times)
-            if len(slices) == 1:
-                return slices[0]
             return xr.concat(slices, dim=xr.DataArray(time_coords, dims="time"))
 
         # Static — original behaviour
@@ -170,7 +172,7 @@ class CubeClient:
         variables: List[str],
         grid_id: Optional[str] = None,
         period: Optional[tuple[str, str]] = None,
-    ) -> RasterBackend:
+    ) -> "RasterBackend":
         """
         Standard integration point for the DisSModel ecosystem.
         Returns a RasterBackend containing all requested variables.
@@ -194,8 +196,30 @@ class CubeClient:
             Only time slices whose value falls within [start, end] are loaded.
             Static variables are unaffected.
             Example: ``period=("2000", "2014")``
+
+        Notes
+        -----
+        CONTRACT decisions (open — to be resolved before 1.0):
+
+        1. Canonical temporal type: ``valid_from`` / ``valid_until`` accept
+           year strings ("2020") or ISO dates ("2020-01-01");
+           ``DerivedVariable.times`` stores ``list[int]`` (years only).
+           Open: validate year-only format at model construction time so
+           callers cannot silently store wrong temporal metadata.
+
+        2. Missing-time behavior: a temporal variable whose slices are all
+           outside ``period`` is skipped with ``log.warning`` and absent from
+           the returned backend. The caller cannot distinguish "variable was
+           static (period ignored)" from "existed but outside the range".
+           Open: raise ``ValueError``, return a NaN slice, or keep skip.
+
+        3. Empty-period backend: when every requested variable is filtered
+           out by ``period``, ``RasterBackend`` is initialized but holds no
+           data arrays. The caller receives a valid-looking but empty backend.
+           Open: raise before returning when no variable was stored.
         """
-        # Detect CRS from first successfully loaded variable
+        from dissmodel.geo.raster.backend import RasterBackend
+
         detected_crs = None
         backend = None
 
@@ -211,19 +235,14 @@ class CubeClient:
                     except Exception:
                         pass
 
-            # Initialise backend from first variable
             if backend is None:
-                if da.ndim == 2:
-                    rows, cols = da.sizes["y"], da.sizes["x"]
-                else:
-                    rows, cols = da.sizes["y"], da.sizes["x"]
+                rows, cols = da.sizes["y"], da.sizes["x"]
                 backend = RasterBackend(shape=(rows, cols))
 
             if da.ndim == 3 and "time" in da.dims:
-                # Temporal variable ─ optionally filter by period
+                # Temporal variable — optionally filter by period
                 if period is not None:
                     start, end = period
-                    # Ensure comparison is done with consistent types (e.g. all ints if coordinates are ints)
                     time_vals = da.coords["time"].values
                     if len(time_vals) > 0 and isinstance(time_vals[0], (int, np.integer)):
                         try:
@@ -237,8 +256,7 @@ class CubeClient:
                     da = da.isel(time=mask)
 
                 if da.sizes.get("time", 0) == 0:
-                    # No slices in requested period — skip with warning
-                    print(f"  [warn] {var_name}: no data in period {period}, skipped")
+                    log.warning("%s: no data in period %s, skipped", var_name, period)
                     continue
 
                 time_coords = da.coords["time"].values

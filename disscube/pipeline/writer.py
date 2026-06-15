@@ -64,10 +64,9 @@ class VariableWriter(PipelineStage):
                 times = [ctx.source.time]
             elif derivation.valid_from is not None:
                 try:
-                    # Try to extract year as integer
-                    times = [int(derivation.valid_from)]
-                except ValueError:
-                    # Fallback to list of 0 or other logic if non-integer dates are used
+                    # Extract year component: accepts "2020" or "2020-01-01"
+                    times = [int(derivation.valid_from.split("-")[0])]
+                except (ValueError, AttributeError):
                     pass
 
             derived = DerivedVariable(
