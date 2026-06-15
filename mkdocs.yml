@@ -26,6 +26,7 @@ nav:
   - Home: index.md
   - Architecture:
       - Overview: architecture/overview.md
+      - Operator System: architecture/operators.md
       - Catalog & Persistence: architecture/catalog.md
       - Pipeline Stages: architecture/pipeline.md
       - Master Grids & Tiling: architecture/tiling.md

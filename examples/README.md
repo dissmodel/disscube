@@ -1,30 +1,41 @@
-# DissCube Examples
+# DisSCube — Exemplos
 
-This folder contains a structured demonstration of the DissCube pipeline, from catalog initialization to complete case studies.
+Demonstração estruturada do pipeline DisSCube, do bootstrap do catálogo até
+estudos de caso completos.
 
-## Execution Order
+## Ordem de execução
 
-### 1. Setup (One-time)
-Bootstrap the catalog and register baseline data.
-- `python examples/setup/01_init_catalog.py`: Registers national and local simulation grids.
-- `python examples/setup/02_register_sources.py`: Registers raw data files as SpatialSources.
-- `python scripts/import_bdc_tiles.py`: Imports BDC tile definitions (one-time, slow).
+### 1. Setup (one-time)
+Bootstrap do catálogo e registro dos dados base.
+- `python examples/setup/01_init_catalog.py` — registra grades nacionais e locais.
+- `python examples/setup/02_register_sources.py` — registra arquivos brutos como SpatialSources.
 
-### 2. National Drivers
-Derive variables on the national 5 km mesh.
-- `python examples/drivers/01_brazil_national.py`: Slope, TI presence, and distance to cities/rivers.
+### 2. Drivers nacionais
+Deriva variáveis na grade nacional BR/5km.
+- `python examples/drivers/01_brazil_national.py` — slope, TI, distância a cidades/rios.
 
-### 3. Case Study: BR-MANGUE (Maranhão)
-- `python examples/case_studies/brmangue/01_derive.py`: Derives land use and environmental variables at 100 m.
-- `python examples/case_studies/brmangue/02_simulate.py`: Runs the BrmangueRasterExecutor.
-- `python examples/case_studies/brmangue/03_temporal_mapbiomas.py`: Demonstrates temporal MapBiomas integration.
+### 3. Estudo de caso: Maranhão (Ilha do Maranhão, 100 m)
+Dois estudos sobre a mesma área geográfica e grade.
+- `python examples/case_studies/maranhao/01_mapbiomas_temporal.py` — série temporal MapBiomas (uso majority) + dist_sedes estática.
+- `python examples/case_studies/maranhao/02_brmangue_derive.py` — deriva uso, alt, solo para o modelo BR-MANGUE.
+- `python examples/case_studies/maranhao/03_brmangue_simulate.py` — executa BrmangueRasterExecutor.
 
-### 4. Case Study: LUCC/AC (Acre)
-- `python examples/drivers/02_acre_5km.py`: Derives Acre-specific drivers at 5 km.
-- `python examples/case_studies/lucc_acre/01_derive.py`: Derives land use attributes from vector data.
-- `python examples/case_studies/lucc_acre/02_simulate.py`: Runs the LUCCRasterExecutor.
-- `python examples/case_studies/lucc_acre/03_temporal_drivers.py`: Simulation loop with temporal drivers.
+### 4. Estudo de caso: Acre (AC/5km)
+- `python examples/drivers/02_acre_5km.py` — drivers regionais Acre 5 km.
+- `python examples/case_studies/lucc_acre/01_derive.py` — atributos de uso do solo de fonte vetorial.
+- `python examples/case_studies/lucc_acre/02_simulate.py` — executa LUCCRasterExecutor.
+- `python examples/case_studies/lucc_acre/03_temporal_drivers.py` — loop de simulação com drivers temporais.
 
 ---
 
-**Note:** For one-time administrative operations like importing BDC tiles from scratch, see `scripts/import_bdc_tiles.py`.
+## Utilitários (`tools/`)
+
+| Script | Uso |
+|---|---|
+| `tools/zarr_to_tif.py` | Converte Zarr derivado para GeoTIFF |
+| `tools/import_bdc_tiles.py` | Importa tiles BDC SM/MD/LG no catálogo (one-time, lento) |
+
+```bash
+python tools/zarr_to_tif.py data/derived/.../var.zarr output.tif
+python tools/import_bdc_tiles.py
+```

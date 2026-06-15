@@ -5,6 +5,8 @@ ENV/
 
 outputs
 
+catalog.db
+
 site
 
 # Python Cache

@@ -1,81 +1,118 @@
-# Grids & Spatial Interoperability
+# Grades e Interoperabilidade Espacial
 
-DisSCube is built on a **Universal Grid Architecture**. This allows multiple areas of study and different resolutions to coexist and interact without the need for expensive and lossy resampling.
+## O problema que as grades snappadas resolvem
 
-## 🔗 The "Magic" of Snapped Grids
+Em workflows GIS tradicionais, criar uma grade para o Acre e outra para o Brasil frequentemente produz pixels desalinhados — o canto de um pixel de 5km do Acre não coincide com o canto de um pixel de 5km do Brasil. Agregar de uma grade para outra gera erros por pixels parciais nas bordas.
 
-When you create a local grid (for a state, municipality, or any Area of Interest), DisSCube doesn't just cut the data at the boundaries. It performs a **Snapping** operation.
+DisSCube resolve isso com **snap ao mesh virtual**: toda grade local é ancorada à mesma origem do CRS, garantindo que pixels de resoluções múltiplas sempre se alinhem perfeitamente.
 
-### What is Snapping?
-Snapping ensures that the boundaries of any grid are exact multiples of its resolution, calculated from the origin `(0,0)` of the Coordinate Reference System (CRS).
+## Grades de referência nacionais
 
-- **Without Snapping**: A grid starting at `x=2815245.5` with 5km resolution would have pixels shifted relative to a national grid.
-- **With Snapping**: DisSCube rounds the start to `x=2815000.0`. 
+```python
+from disscube.utils.grids import register_simulation_grids
 
-### Why it matters
-Because all grids (National, State, Local) are "pinned" to the same universal virtual mesh, **their pixels always align perfectly**. If you place a 5km pixel of the Acre grid over the 5km pixel of the Brazil grid, they are exactly the same square in the world.
+register_simulation_grids(cube)
+# Registra:
+#   BR/5km  — 5000 m, BDC Albers, bbox nacional
+#   BR/1km  — 1000 m, BDC Albers, bbox nacional
+```
 
-## 📦 Nested Grids (Hierarchy)
-
-Nesting happens when you use resolutions that are multiples of each other (e.g., 5km, 1km, 100m). 
-
-Since they are all snapped to the same origin, the pixels form a perfect hierarchy:
-- **1 pixel of 5km** contains exactly **25 pixels of 1km** ($5 \times 5$).
-- **1 pixel of 1km** contains exactly **100 pixels of 100m** ($10 \times 10$).
-
-This "magic" allows for **Zero-Error Aggregation**. When calculating the percentage of forest (at 100m resolution) inside a model cell (at 5km), DisSCube knows exactly which $50 \times 50$ small pixels belong to the large cell. There are no "partial pixels" at the edges.
-
-## 🛠 Using `register_local_grid`
-
-To take advantage of this, always use the `register_local_grid` utility:
+## Grades locais com snap
 
 ```python
 from disscube.utils.grids import register_local_grid
 
-# Register a 1km grid for Acre that "nests" inside the national 5km grid
 grid = register_local_grid(
-    cube, 
-    name="AC", 
-    bbox_geo=(-74, -11, -66, -7), 
-    resolution=1000.0,
-    snap=True # This is the magic switch (True by default)
+    cube,
+    name="AC",                            # ou state="AC"
+    bbox_geo=(-73.99, -11.15, -66.62, -7.11),  # lon_min, lat_min, lon_max, lat_max
+    resolution=5_000.0,
+    snap=True,                            # padrão
 )
+# Produz grade "AC/5km" em BDC Albers
 ```
 
-## 🗺 Spatial Relations
+**O que `snap=True` faz:**
 
-`SpatialRelation` entities define how data should move between different grids. Because of the snapping/nesting logic, these relations become much more powerful.
+A bbox geográfica é convertida para BDC Albers e os limites são arredondados para o múltiplo mais próximo da resolução:
+
+```python
+minx = math.floor(minx / resolution) * resolution
+maxx = math.ceil(maxx  / resolution) * resolution
+```
+
+Resultado: `AC/5km` e `BR/5km` têm pixels idênticos na área de sobreposição — um pixel de 5km do Acre é o mesmo quadrado geográfico que o pixel de 5km do Brasil.
+
+## Hierarquia de resoluções
+
+Resoluções múltiplas dentro do mesmo CRS formam uma hierarquia perfeita:
+
+```
+1 pixel de 5km
+├── 25 pixels de 1km (5×5)
+└── 2500 pixels de 100m (50×50)
+```
+
+Isso permite **agregação zero-erro**: ao calcular `percentage` de floresta (100m) dentro de uma célula de modelo (5km), todos os pixels de 100m que compõem a célula de 5km são conhecidos exatamente.
+
+## Relações espaciais
+
+`SpatialRelation` registra a relação pai-filho entre grades:
 
 ```python
 from disscube.models import SpatialRelation
 
-# Define that BR/1km is a child of BR/5km
-rel = SpatialRelation(
-    source_grid_id="BR/1km",
-    target_grid_id="BR/5km",
-    strategy="simple" # Because they are nested, "simple" is perfectly accurate
-)
-cube.register_relation(rel)
+cube.register_relation(SpatialRelation(
+    source_grid_id="AC/1km",
+    target_grid_id="AC/5km",
+    strategy="simple",
+))
 ```
 
-### Strategies
-- **simple**: Used when grids are nested. The engine can perform fast block-aggregation (e.g., average $5 \times 5$ pixels).
-- **keepinboth**: Used when you want to ensure the variable is available at both scales during cross-scale models.
+**Estratégias disponíveis** (reservadas para uso futuro no pipeline):
 
-## Creating a Custom Local Grid (Manual)
+| Estratégia | Uso pretendido |
+|---|---|
+| `simple` | Grades nested — sem ambiguidade na agregação |
+| `chooseone` | Células que pertencem a apenas uma grade-alvo |
+| `keepinboth` | Células mantidas em ambas as grades (sobreposição) |
 
-If you don't want to use the universal mesh (not recommended), you can register a `GridSpec` manually:
+!!! note "Status das estratégias"
+    As estratégias estão modeladas no schema mas ainda não são aplicadas pelo pipeline de derivação. São reservadas para o mecanismo de cross-scale do DisSModel.
+
+## Criação manual de grade
+
+Quando o snap ao mesh BDC não é necessário (ex: projeto com CRS local):
 
 ```python
 from disscube.models import GridSpec
 
-my_grid = GridSpec(
-    id="ProjectX/30m",
+grid = GridSpec(
+    id="projeto_local/30m",
     type="local",
     crs="EPSG:31983",
     resolution=30.0,
-    bbox=[580000, 9700000, 600000, 9720000],
-    description="Manual grid - won't align with BDC national mesh"
+    bbox=[580000.0, 9700000.0, 600000.0, 9720000.0],
+    description="Grade manual sem snap ao mesh nacional",
 )
-cube.register_grid(my_grid)
+cube.register_grid(grid)
+```
+
+!!! warning
+    Grades sem snap podem não alinhar com grades nacionais. A agregação cruzada entre grades não-alinhadas introduz erros por pixels parciais.
+
+## Propriedades derivadas de `GridSpec`
+
+```python
+grid = GridSpec(id="G", type="local", crs="EPSG:31982", resolution=100, bbox=[0,0,1000,1000])
+
+grid.rows        # 10
+grid.cols        # 10
+grid.transform   # Affine (North-up, origem no canto superior esquerdo)
+grid.xs          # array de centróides X de cada coluna
+grid.ys          # array de centróides Y de cada linha
+
+# Identificação de células
+cell = grid.cell_id(row=3, col=7)          # "G:R0003C0007"
+x, y = grid.coords_from_cell_id(cell)     # centróide em coordenadas do CRS
 ```

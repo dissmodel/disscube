@@ -1,81 +1,108 @@
+"""
+Proximity operators — Euclidean distance and feature-count over vector sources.
+"""
+
+from __future__ import annotations
+
 import numpy as np
 import xarray as xr
 import geopandas as gpd
 import rasterio.features
-from affine import Affine
-from scipy.ndimage import distance_transform_edt
+from rasterio.warp import Resampling
 
-class ProximityAggregator:
-    @staticmethod
-    def aggregate(data: xr.DataArray | gpd.GeoDataFrame, variables, grid_spec):
-        rows = grid_spec.rows
-        cols = grid_spec.cols
-        transform = grid_spec.transform
-        xs = grid_spec.xs
-        ys = grid_spec.ys
-        var = variables[0]
+from disscube.operators.base import Operator
+from disscube.models.variable import Variable
+from disscube.models.grid import GridSpec
 
+
+class MinDistanceOperator(Operator):
+    """
+    Euclidean distance (in CRS units) from each grid cell to the nearest
+    feature in the vector source.
+    """
+    name = "min_distance"
+    _resampling = Resampling.nearest
+
+    def compute(self, data, var: Variable, grid: GridSpec) -> xr.DataArray:
         if isinstance(data, gpd.GeoDataFrame):
-            if var.operator == "min_distance":
-                # Rasterize to binary mask (1 where features exist)
-                shapes = ((geom, 1) for geom in data.geometry if geom is not None)
-                mask = rasterio.features.rasterize(
-                    shapes,
-                    out_shape=(rows, cols),
-                    transform=transform,
-                    fill=0,
-                    all_touched=True
-                )
-                # Distance transform
-                dist = distance_transform_edt(1 - mask) * grid_spec.resolution
-                
-                da = xr.DataArray(dist, dims=("y", "x"), coords={"y": ys, "x": xs})
-                da.rio.write_crs(grid_spec.crs, inplace=True)
-                da.rio.write_transform(transform, inplace=True)
-                return da
-            
-            elif var.operator == "count":
-                # For count, we can use rasterize with 'merge_alg=ADD' if available, 
-                # but rasterio's rasterize doesn't support ADD directly like that.
-                # Instead, we can use spatial join or iterate.
-                # Faster way for many points: use numpy bincount with cell indices.
-                
-                # Filter valid geometries
-                valid_data = data[data.geometry.notnull()]
-                if valid_data.empty:
-                    counts = np.zeros((rows, cols))
-                else:
-                    # Get pixel coordinates
-                    # Note: grid_spec.transform is from north-up (origin at top-left)
-                    # col = (x - minx) / res
-                    # row = (maxy - y) / res
-                    minx, miny, maxx, maxy = grid_spec.bbox
-                    res = grid_spec.resolution
-                    
-                    # Get centroids of geometries
-                    centroids = valid_data.geometry.centroid
-                    
-                    cols_idx = ((centroids.x - minx) / res).astype(int)
-                    rows_idx = ((maxy - centroids.y) / res).astype(int)
-                    
-                    # Filter indices within bounds
-                    mask = (cols_idx >= 0) & (cols_idx < cols) & (rows_idx >= 0) & (rows_idx < rows)
-                    cols_idx = cols_idx[mask]
-                    rows_idx = rows_idx[mask]
-                    
-                    # Flatten indices for bincount
-                    flat_idx = rows_idx * cols + cols_idx
-                    counts_flat = np.bincount(flat_idx, minlength=rows * cols)
-                    counts = counts_flat.reshape((rows, cols))
-                
-                da = xr.DataArray(counts, dims=("y", "x"), coords={"y": ys, "x": xs})
-                da.rio.write_crs(grid_spec.crs, inplace=True)
-                da.rio.write_transform(transform, inplace=True)
-                return da
-            
+            from scipy.ndimage import distance_transform_edt
+            shapes = ((g, 1) for g in data.geometry if g is not None)
+            mask = rasterio.features.rasterize(
+                shapes,
+                out_shape=(grid.rows, grid.cols),
+                transform=grid.transform,
+                fill=0,
+                all_touched=True,
+            )
+            dist = distance_transform_edt(1 - mask) * grid.resolution
+            return xr.DataArray(
+                dist, dims=("y", "x"), coords={"y": grid.ys, "x": grid.xs}
+            )
         if isinstance(data, xr.DataArray):
             if "band" in data.dims:
                 data = data.isel(band=0)
             return data.transpose("y", "x")
+        raise TypeError(
+            f"'min_distance' expects a vector source, got {type(data).__name__}"
+        )
 
-        return xr.DataArray(np.zeros((rows, cols)), dims=("y", "x"), coords={"y": ys, "x": xs})
+
+class CountOperator(Operator):
+    """Count of vector features whose centroid falls within each grid cell."""
+    name = "count"
+    _resampling = Resampling.nearest
+
+    def compute(self, data, var: Variable, grid: GridSpec) -> xr.DataArray:
+        if isinstance(data, gpd.GeoDataFrame):
+            valid = data[data.geometry.notnull()]
+            if valid.empty:
+                counts = np.zeros((grid.rows, grid.cols), dtype=np.float64)
+            else:
+                minx, miny, maxx, maxy = grid.bbox
+                res = grid.resolution
+                centroids = valid.geometry.centroid
+                cols_idx = ((centroids.x - minx) / res).astype(int)
+                rows_idx = ((maxy - centroids.y) / res).astype(int)
+                in_bounds = (
+                    (cols_idx >= 0) & (cols_idx < grid.cols)
+                    & (rows_idx >= 0) & (rows_idx < grid.rows)
+                )
+                flat = rows_idx[in_bounds] * grid.cols + cols_idx[in_bounds]
+                counts = np.bincount(
+                    flat, minlength=grid.rows * grid.cols
+                ).reshape((grid.rows, grid.cols)).astype(np.float64)
+            return xr.DataArray(
+                counts, dims=("y", "x"), coords={"y": grid.ys, "x": grid.xs}
+            )
+        if isinstance(data, xr.DataArray):
+            if "band" in data.dims:
+                data = data.isel(band=0)
+            return data.transpose("y", "x")
+        raise TypeError(
+            f"'count' expects a vector source, got {type(data).__name__}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Legacy compatibility shim
+# ---------------------------------------------------------------------------
+
+class ProximityAggregator:
+    """
+    Deprecated.  Use ``MinDistanceOperator`` / ``CountOperator`` directly.
+    """
+
+    @staticmethod
+    def aggregate(data, variables, grid_spec):
+        import warnings
+        warnings.warn(
+            "ProximityAggregator is deprecated; use OPERATOR_REGISTRY operators directly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from disscube.operators.base import OPERATOR_REGISTRY
+        var = variables[0]
+        op_cls = OPERATOR_REGISTRY.get(var.operator)
+        if op_cls is None:
+            raise ValueError(f"Unknown operator: {var.operator}")
+        return op_cls().compute(data, var, grid_spec)
