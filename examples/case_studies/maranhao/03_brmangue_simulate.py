@@ -13,7 +13,7 @@ Usage:
 from disscube.client import CubeClient
 
 try:
-    from brmangue.executor.raster_executor import BrmangueRasterExecutor
+    from brmangue.executors.raster_executor import BrmangueRasterExecutor
     from dissmodel.executor import ExperimentRecord
 except ImportError as e:
     print(f"Warning: {e}. Skipping simulation step.")
