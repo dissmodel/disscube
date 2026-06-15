@@ -34,7 +34,6 @@ relevant_data = {
     "grid_id":     ...,
     "role":        ...,
     "variables":   [...],   # ordenados por nome
-    "relations":   [...],   # ordenados, sem campo metadata
     "valid_from":  ...,
     "valid_until": ...,
 }
@@ -49,13 +48,12 @@ return hashlib.sha256(encoded).hexdigest()
 - Adicionar/remover/renomear variáveis
 - Mudar o operador ou `class_code`
 - Mudar `valid_from` / `valid_until`
-- Adicionar/remover relações espaciais
 
 **O que não muda o hash:**
 
-- Metadados das relações (`SpatialRelation.metadata`)
 - A ordem das variáveis na lista (são ordenadas por nome)
 - `bbox` de `Derivation` (metadado descritivo, não parâmetro)
+- `SpatialRelation` — relações são persistidas no catálogo mas excluídas do hash porque nenhum estágio do pipeline as usa durante a computação. Incluí-las tornaria a chave de cache sensível a metadados que não afetam o resultado.
 
 ## Hash de conteúdo (`content_hash`)
 

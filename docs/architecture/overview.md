@@ -86,8 +86,9 @@ Cada `SpatialDerivation` tem um `spec_hash` — SHA-256 determinístico de:
 - `grid_id`
 - `role`
 - variáveis (nome + operador + class_code, ordenadas por nome)
-- relações espaciais (ordenadas, sem metadados)
 - `valid_from` / `valid_until`
+
+`SpatialRelation` é excluída do hash: nenhum estágio do pipeline a usa durante a computação, então incluí-la tornaria o cache sensível a metadados sem efeito no resultado.
 
 Se qualquer parâmetro mudar, o hash muda. O pipeline verifica o cache antes de processar: se todos os `DerivedVariable` com o mesmo `spec_hash` já existem no disco, a derivação é pulada.
 

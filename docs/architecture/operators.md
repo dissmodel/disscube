@@ -30,22 +30,31 @@ O `GridAligner` consulta `op_cls.resampling()` para escolher o método de reamos
 
 ## Operadores disponíveis
 
-### Zonais — raster e vetor
+### Zonais com reamostragem direta
+
+Estes operadores recebem do `GridAligner` um `DataArray` já reprojetado na resolução alvo. O `_resampling` determina o método de reprojeção.
 
 | Operador | `_resampling` | Raster | Vetor | `requires_class_code` |
 |---|---|---|---|---|
 | `mean` | `average` | média dos pixels no upscale | — | não |
 | `sum` | `sum` | soma dos pixels no upscale | — | não |
-| `std` | `nearest` | valor reamostrado¹ | — | não |
 | `min` | `min` | mínimo no upscale | — | não |
 | `max` | `max` | máximo no upscale | — | não |
-| `majority` | `mode` | moda no upscale | rasteriza com `class_code` (ou 1) | não |
-| `minority` | `mode` | moda no upscale | rasteriza com `class_code` (ou 1) | não |
-| `percentage` | `mode` | valor reamostrado¹ | rasteriza com `class_code` | **sim** |
 | `attribute` | `nearest` | passthrough | rasteriza com valor da coluna `var.name` | não |
 | `presence` | `nearest` | passthrough | rasteriza com `class_code` (ou 1) binário | não |
 
-¹ `std` e `percentage` para rasters usam o dado já reamostrado pelo `GridAligner` — estatísticas verdadeiras de janela (como `rasterstats`) são trabalho futuro.
+### Zonais com alinhamento fino (`needs_fine_alignment = True`)
+
+Estes operadores recebem um array de alta resolução snappado na origem do grid alvo. O `GridAligner` reprojeita com `Resampling.nearest` em resolução fina (sub-múltiplo inteiro do tamanho da célula); o operador reduz por janelas reais sobre os pixels brutos.
+
+| Operador | Raster | Vetor | `requires_class_code` |
+|---|---|---|---|
+| `std` | desvio padrão real por célula | — | não |
+| `majority` | classe dominante por contagem | rasteriza com `class_code` (ou 1) | não |
+| `minority` | classe menos frequente por contagem | rasteriza com `class_code` (ou 1) | não |
+| `percentage` | fração de pixels da classe-alvo | rasteriza com `class_code` | **sim** |
+
+Os três últimos produzem também `coverage_purity` e `dominance_purity` como coordenadas do `DataArray` de saída (persistem no Zarr junto à variável).
 
 ### Proximidade — vetor (e passthrough para raster)
 

@@ -16,9 +16,9 @@ from disscube.utils.bdc_importer import import_bdc_grids
 
 import_bdc_grids(
     cube,
-    sm_shp="data/bdc_grids/BDC_SM_V2.shp",
-    md_shp="data/bdc_grids/BDC_MD_V2.shp",
-    lg_shp="data/bdc_grids/BDC_LG_V2.shp",
+    sm_path="data/bdc_grids/BDC_SM_V2.shp",
+    md_path="data/bdc_grids/BDC_MD_V2.shp",
+    lg_path="data/bdc_grids/BDC_LG_V2.shp",
 )
 ```
 
@@ -39,8 +39,9 @@ derivation = SpatialDerivation(
 # Processar um tile
 cube.derive(derivation, tile_id="009002")
 
-# Processar todos os tiles em loop
-tiles = [s for s in cube.catalog.list_spatial_sources() if s.id.startswith("BR/5km_")]
+# Processar todos os tiles SM em loop
+# Tiles são registrados com IDs no formato BDC_SM_<tile> (ex: BDC_SM_009002)
+tiles = [s for s in cube.catalog.list_spatial_sources() if s.id.startswith("BDC_SM_")]
 for tile_source in tiles:
     tile_id = tile_source.id.split("_")[-1]
     cube.derive(derivation, tile_id=tile_id)
@@ -51,12 +52,15 @@ Cada tile é processado de forma independente e pode ser paralelizado.
 ## Carregar resultado tileado
 
 ```python
-# Tile específico
+# Tile específico — sempre funciona
 da = cube.load("slope", tile_id="009002")
 
-# Todos os tiles da grade (mosaico automático)
+# Por grade — funciona apenas quando há um único tile no resultado
 da = cube.load("slope", grid_id="BR/5km")
 ```
+
+!!! warning "Carga multi-tile"
+    `load()` sem `tile_id` retorna silenciosamente o primeiro resultado quando múltiplos tiles da mesma variável existem na mesma grade. Mosaico automático não está implementado. **Sempre especifique `tile_id` em workloads multi-tile.**
 
 ## Grade 100m nacional
 
