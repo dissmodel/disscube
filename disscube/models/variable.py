@@ -66,21 +66,15 @@ class SpatialDerivation(BaseModel):
             v.model_dump() for v in sorted(self.variables, key=lambda x: x.name)
         ]
 
-        relations_data = []
-        for r in sorted(
-            self.relations,
-            key=lambda x: (x.source_grid_id, x.target_grid_id, x.strategy),
-        ):
-            r_dict = r.model_dump()
-            r_dict.pop("metadata", None)
-            relations_data.append(r_dict)
-
+        # relations are intentionally excluded from the hash:
+        # no pipeline stage reads SpatialRelation during computation, so
+        # including them would make the cache key sensitive to metadata that
+        # does not affect the output — violating the reproducibility guarantee.
         relevant_data = {
             "source_id":   self.source_id,
             "grid_id":     self.grid_id,
             "role":        self.role,
             "variables":   variables_data,
-            "relations":   relations_data,
             "valid_from":  self.valid_from,   # None for static variables
             "valid_until": self.valid_until,  # None for static variables
         }

@@ -198,7 +198,7 @@ Operadores sobre fontes vetoriais (`majority`, `percentage`, `attribute`, `prese
 `CubeClient.load(name)` sem `tile_id` retorna silenciosamente o primeiro resultado quando múltiplos tiles da mesma variável existem na mesma grade. Erro explícito ou mosaico automático estão planejados. **Especifique sempre `tile_id` em workloads multi-tile.**
 
 **`SpatialRelation` não atua no pipeline**
-O modelo `SpatialRelation` é persistido no catálogo e incluído no `spec_hash` (mudá-lo invalida o cache), mas nenhum estágio do pipeline usa as relações durante a derivação. A integração com estratégias hierárquicas de grades está reservada para versão futura.
+O modelo `SpatialRelation` é persistido no catálogo, mas nenhum estágio do pipeline usa as relações durante a derivação — e por isso elas são **excluídas do `spec_hash`**. Incluí-las tornaria a chave de cache sensível a metadados que não afetam o resultado, quebrando a garantia de reprodutibilidade. A integração com estratégias hierárquicas de grades está reservada para versão futura.
 
 **`purity_threshold` reservado**
 O campo `purity_threshold` em `Derivation` é incluído no `spec_hash`, mas não é aplicado à saída — a máscara por pureza não está implementada. Definir `purity_threshold` muda o cache key sem mudar o resultado.
