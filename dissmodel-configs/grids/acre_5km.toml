@@ -1,6 +1,0 @@
-id = "BR/5km"
-type = "reference"
-crs = "+proj=aea +lat_0=-12 +lon_0=-54 +lat_1=-2 +lat_2=-22 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +units=m +no_defs"
-resolution = 5000.0
-bbox = [ 2822000.0, 10049000.0, 3637000.0, 10474000.0,]
-description = "Acre grid PERFECTLY ALIGNED with BDC pixel grid (2000m/4000m offset)"
