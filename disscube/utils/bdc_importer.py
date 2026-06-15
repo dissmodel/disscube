@@ -1,6 +1,5 @@
 import logging
 
-import fiona
 from shapely.geometry import shape
 from disscube.models import SpatialSource
 from disscube.client import CubeClient
@@ -35,6 +34,13 @@ def import_bdc_grids(cube: CubeClient, sm_path: str, md_path: str, lg_path: str)
 
 def _register_tile_sources(cube: CubeClient, paths: dict[str, str]) -> None:
     """Register BDC tile envelopes as SpatialSources."""
+    try:
+        import fiona
+    except ImportError as exc:
+        raise ImportError(
+            "fiona is required for BDC import; install disscube[bdc]"
+        ) from exc
+
     level_paths = [
         ("SM", paths["sm_path"]),
         ("MD", paths["md_path"]),
