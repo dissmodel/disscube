@@ -101,7 +101,7 @@ Cada operador é uma subclasse de `Operator` que se auto-registra no `OPERATOR_R
 ```python
 class MajorityOperator(Operator):
     name = "majority"
-    _resampling = Resampling.mode
+    _resampling = Resampling.nearest
 
     def compute(self, data, var, grid) -> xr.DataArray:
         ...
