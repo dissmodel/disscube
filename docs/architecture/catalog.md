@@ -81,7 +81,21 @@ cube.catalog.search_derived_variables(tile_id="009002")
 
 # Por spec_hash (exato)
 cube.catalog.get_derived_by_hash("a3f9...")
+
+# Remover entrada por ID
+cube.catalog.delete_derived("a3f9..._slope")
 ```
+
+## Limpeza de entradas órfãs
+
+O catálogo acumula entradas cujos arquivos Zarr foram deletados (comum ao apagar o store para re-testar). `purge_stale()` remove essas entradas:
+
+```python
+n = cube.purge_stale()   # retorna o número de entradas removidas
+print(f"Removidas {n} entradas órfãs")
+```
+
+`load()` já ignora silenciosamente entradas sem arquivo no disco — `purge_stale()` é uma limpeza explícita para manter o catálogo enxuto.
 
 ## Evolução do schema
 
