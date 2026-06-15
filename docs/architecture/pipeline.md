@@ -105,7 +105,7 @@ final_ds[var.name] = result
 
 Não contém nenhuma lógica de operador — é puro despacho. O `if/elif` histórico foi eliminado.
 
-Monta o `xr.Dataset` final com CRS nomeado (evita `PROJCS["unknown"]` no QGIS para CRSs sem EPSG registrado, como BDC Albers) e `transform`.
+Monta o `xr.Dataset` final. `write_crs()` e `write_transform()` são chamados **depois** do loop de variáveis — rioxarray propaga `grid_mapping="spatial_ref"` apenas para as data variables já presentes no Dataset no momento da chamada. Chamar antes do loop resultaria em nenhuma variável recebendo o atributo, impedindo que leitores CF (QGIS, GDAL) detectem a projeção automaticamente. O CRS é nomeado explicitamente para evitar `PROJCS["unknown"]` em CRSs sem código EPSG registrado (ex: BDC Albers).
 
 ---
 

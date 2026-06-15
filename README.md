@@ -113,13 +113,15 @@ backend = cube.to_lucc_data(
 | `std` | zonal | nearest | não |
 | `min` | zonal | min | não |
 | `max` | zonal | max | não |
-| `majority` | zonal | mode | não |
-| `minority` | zonal | mode | não |
-| `percentage` | zonal | mode | **sim** |
+| `majority` | zonal | nearest¹ | não |
+| `minority` | zonal | nearest¹ | não |
+| `percentage` | zonal | nearest¹ | **sim** |
 | `attribute` | zonal | nearest | não |
 | `presence` | zonal | nearest | não |
 | `min_distance` | proximity | nearest | não |
 | `count` | proximity | nearest | não |
+
+> ¹ Usam `needs_fine_alignment=True`: o GridAligner reamosttrea com `nearest` em alta resolução; a redução real (contagem por janela) é feita pelo operador.
 
 ## Pipeline
 
