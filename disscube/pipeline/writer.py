@@ -46,7 +46,7 @@ class VariableWriter(PipelineStage):
             full_path = self.storage.get_full_path(relative_path)
             
             # Save as dataset to preserve all coordinates (including spatial_ref)
-            da.to_dataset(name=var_name).to_zarr(full_path, mode="w")
+            da.to_dataset(name=var_name).to_zarr(full_path, mode="w", consolidated=False)
             
             # Calculate content hash (SHA-256) of the Zarr directory
             content_hash = self._calculate_dir_hash(full_path)
@@ -64,10 +64,9 @@ class VariableWriter(PipelineStage):
                 times = [ctx.source.time]
             elif derivation.valid_from is not None:
                 try:
-                    # Try to extract year as integer
-                    times = [int(derivation.valid_from)]
-                except ValueError:
-                    # Fallback to list of 0 or other logic if non-integer dates are used
+                    # Extract year component: accepts "2020" or "2020-01-01"
+                    times = [int(derivation.valid_from.split("-")[0])]
+                except (ValueError, AttributeError):
                     pass
 
             derived = DerivedVariable(

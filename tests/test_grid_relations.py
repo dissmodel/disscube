@@ -74,44 +74,38 @@ def test_multiple_relations_and_bidirectional(tmp_path):
     assert len(relations_bdc) == 1
     assert relations_bdc[0].source_grid_id == "br_mangue_100m"
 
-def test_spec_hash_invalidation_with_relations():
-    v = [Variable(name="test", operator="identity")]
-    
-    # Derivação sem relações
-    deriv1 = SpatialDerivation(
-        source_id="src1",
-        grid_id="grid1",
-        role="test",
-        variables=v,
-        relations=[]
+def test_spec_hash_stable_regardless_of_relations():
+    """Relations are excluded from spec_hash: they are not used in computation.
+
+    Two derivations identical in every computational aspect (source, grid, role,
+    variables, temporal window) must produce the same spec_hash even if their
+    SpatialRelation lists differ. This is the correct behaviour: including
+    relations would make the cache key sensitive to metadata that does not
+    affect the output.
+    """
+    v = [Variable(name="test", operator="mean")]
+
+    deriv_no_rel = SpatialDerivation(
+        source_id="src1", grid_id="grid1", role="test",
+        variables=v, relations=[],
     )
-    hash1 = deriv1.spec_hash()
-    
-    # Derivação com uma relação
-    rel = SpatialRelation(source_grid_id="grid1", target_grid_id="grid2", strategy="simple")
-    deriv2 = SpatialDerivation(
-        source_id="src1",
-        grid_id="grid1",
-        role="test",
+    deriv_with_rel = SpatialDerivation(
+        source_id="src1", grid_id="grid1", role="test",
         variables=v,
-        relations=[rel]
+        relations=[SpatialRelation(source_grid_id="grid1",
+                                   target_grid_id="grid2",
+                                   strategy="simple")],
     )
-    hash2 = deriv2.spec_hash()
-    
-    assert hash1 != hash2
-    
-    # Mudar parâmetro da relação invalida o hash
-    rel_modified = SpatialRelation(source_grid_id="grid1", target_grid_id="grid2", strategy="keepinboth")
-    deriv3 = SpatialDerivation(
-        source_id="src1",
-        grid_id="grid1",
-        role="test",
+    deriv_other_rel = SpatialDerivation(
+        source_id="src1", grid_id="grid1", role="test",
         variables=v,
-        relations=[rel_modified]
+        relations=[SpatialRelation(source_grid_id="grid1",
+                                   target_grid_id="grid2",
+                                   strategy="keepinboth")],
     )
-    hash3 = deriv3.spec_hash()
-    
-    assert hash2 != hash3
+
+    assert deriv_no_rel.spec_hash() == deriv_with_rel.spec_hash()
+    assert deriv_with_rel.spec_hash() == deriv_other_rel.spec_hash()
 
 if __name__ == "__main__":
     pytest.main([__file__])

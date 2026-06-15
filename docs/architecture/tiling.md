@@ -1,32 +1,86 @@
-# Master Grids & Tiling
+# Tiling e Processamento Particionado
 
-To process continental-scale data without massive memory requirements, DisSCube uses a "Virtual Tiling" approach.
+Para processar dados em escala continental (ex: Brasil a 100m) sem carregar o país inteiro em memória, DisSCube usa um modelo de particionamento baseado em tiles.
 
-## The Concept
+## Conceito
 
-Instead of creating thousands of individual small grids (which pollutes the catalog), we define a few **Master Grids** and use **Tiles** as execution filters.
+Uma **Master Grid** define a resolução e o CRS para todo o país. **Tiles** são recortes com o mesmo CRS e resolução — apenas o bbox muda. O pipeline executa um tile por vez, gerando Zarr isolados que podem ser paralelizados.
 
 ```mermaid
 graph TD
-    MG[Master Grid: 10m Brazil] --> T1[Tile 001]
+    MG[Master Grid: BR/5km] --> T1[Tile 001]
     MG --> T2[Tile 002]
-    MG --> T3[Tile N...]
-    
-    T1 --> P1[Process Partition 1]
-    T2 --> P2[Process Partition 2]
+    MG --> TN[Tile N…]
+    T1 --> Z1[zarr: .../BR_5km/001/{hash}/var.zarr]
+    T2 --> Z2[zarr: .../BR_5km/002/{hash}/var.zarr]
 ```
 
-## How it works in Code
+## Como o CubeClient usa tiles
 
-When you call `cube.derive(derivation, tile_id="XYZ")`:
+```python
+cube.derive(derivation, tile_id="009002")
+```
 
-1. The system fetches the `GridSpec` for the Master Grid.
-2. It fetches the `SpatialSource` for the specific tile to get its `BBOX`.
-3. It creates a **Temporary Grid** that has the same resolution/CRS as the Master Grid but is restricted to the tile's BBOX.
-4. The pipeline processes only this small window.
-5. The output is saved in a tile-specific directory, preventing file collisions.
+Internamente:
+1. Busca `GridSpec` da master grid.
+2. Busca `SpatialSource` com id `{grid_id}_{tile_id}` para obter o `bbox` do tile.
+3. Cria um `GridSpec` temporário: mesmos CRS e resolução, bbox restrito ao tile.
+4. Executa o pipeline nessa grade temporária.
+5. Salva em `data/derived/{grid_id}/009002/{spec_hash}/{var}.zarr`.
 
-## Benefits
-- **Memory Efficiency**: Process Brazil at 10m in 2GB of RAM by iterating tiles.
-- **Parallelism**: Multiple workers can process different tiles of the same Master Grid simultaneously without race conditions (thanks to SQLite and unique paths).
-- **Consistency**: All tiles are guaranteed to align perfectly because they all derive from the same Master Grid mathematical definition.
+## Registrar tiles
+
+Cada tile é registrado como um `SpatialSource` especial com o bbox do tile:
+
+```python
+from disscube.models import SpatialSource
+
+cube.register_spatial_source(SpatialSource(
+    id="BDC_SM_009002",          # convenção: {grid_id}_{tile_id}
+    name="BDC SM Tile 009002",
+    format="raster",
+    asset_url="data/raw/tile_009002.tif",
+    crs="EPSG:...",
+    bbox=[-70.0, -10.0, -65.0, -5.0],   # bbox do tile em coordenadas geográficas
+))
+```
+
+O utilitário `disscube.utils.bdc_importer` automatiza esse processo para tiles BDC.
+
+## Processamento em loop
+
+```python
+tiles = cube.catalog.list_spatial_sources()
+tile_ids = [s.id.split("_")[-1] for s in tiles if s.id.startswith("BDC_SM_")]
+
+for tile_id in tile_ids:
+    cube.derive(derivation, tile_id=tile_id)
+```
+
+> **Nota:** o `bdc_importer` registra tiles BDC como `SpatialSource` com IDs no formato
+> `BDC_SM_<tile>`. A grade de simulação permanece `BR/5km` ou `BR/1km` — os tiles BDC
+> definem apenas o bbox do recorte a processar.
+
+Cada iteração é independente. Workers paralelos podem processar tiles diferentes sem conflitos (caminhos Zarr únicos por tile + spec_hash).
+
+## Carregar dados tileados
+
+```python
+# Carga de um tile específico (tile_id sempre funciona)
+da = cube.load("dist_road", tile_id="009002")
+
+# Carga por grade — funciona quando há apenas um tile
+da = cube.load("dist_road", grid_id="BR/5km")
+```
+
+> **Limitação atual:** `load()` sem `tile_id` retorna silenciosamente o primeiro resultado
+> quando múltiplos tiles da mesma variável existem na mesma grade. A desambiguação
+> automática (mosaico ou erro explícito) está planejada mas não implementada.
+> Especifique sempre `tile_id` em workloads multi-tile.
+
+## Vantagens
+
+- **Memória controlada:** processa um tile de cada vez.
+- **Paralelismo trivial:** workers independentes, sem race conditions.
+- **Consistência garantida:** todos os tiles derivam da mesma `GridSpec` — pixels sempre alinhados.
+- **Cache por tile:** re-executar um tile com o mesmo `spec_hash` é no-op.

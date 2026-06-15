@@ -1,8 +1,12 @@
+import logging
+
 import fiona
 from shapely.geometry import shape
 from disscube.models import SpatialSource
 from disscube.client import CubeClient
 from .grids import BDC_CRS, register_simulation_grids
+
+log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # BDC Specific Constants
@@ -37,7 +41,7 @@ def _register_tile_sources(cube: CubeClient, paths: dict[str, str]) -> None:
         ("LG", paths["lg_path"]),
     ]
     for label, path in level_paths:
-        print(f"\nImporting BDC_{label} tiles from {path} …")
+        log.info("Importing BDC_%s tiles from %s", label, path)
         count = 0
         with fiona.open(path) as src:
             for rec in src:
@@ -56,4 +60,4 @@ def _register_tile_sources(cube: CubeClient, paths: dict[str, str]) -> None:
                 cube.register_spatial_source(source)
                 count += 1
 
-        print(f"  [tiles] registered {count} BDC_{label} tiles")
+        log.info("[tiles] registered %d BDC_%s tiles", count, label)

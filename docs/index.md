@@ -1,21 +1,50 @@
-# DisSCube Documentation
+# DisSCube
 
-Welcome to the DisSCube documentation. DisSCube is the geospatial data engine for the **DisSModel** ecosystem.
+DisSCube é o motor de cubos de dados espaciais do ecossistema **DisSModel**. Ele converte fontes geoespaciais brutas em variáveis derivadas alinhadas a grades de modelagem LUCC (Land Use and Cover Change).
 
-## Documentation Structure
+## Conceito central
 
-- **[Architecture](architecture/overview.md)**: Deep dive into how DisSCube works, its pipeline, and the SQLite catalog system.
-- **[Guides](guides/bdc.md)**: Practical examples on how to use DisSCube with Brazil Data Cube tiles and custom grids.
-
-## Quick Install
-
-```bash
-pip install -r requirements.txt
+```
+SpatialSource  →  Derivation  →  Variable  →  DerivedVariable (Zarr)
 ```
 
-## Core Workflow
+Uma **fonte** (`SpatialSource`) passa por uma **derivação** que aplica um **operador** a uma **grade** (`GridSpec`), produzindo uma variável registrada no catálogo SQLite e armazenada em Zarr.
 
-1. **Register** your grids and raw data sources in the catalog.
-2. **Define** a declarative `SpatialDerivation`.
-3. **Execute** the derivation to generate Zarr cube variables.
-4. **Load** the variables for analysis or modeling.
+## Instalação rápida
+
+```bash
+git clone https://github.com/DisSModel/disscube.git
+cd disscube
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+```
+
+## Fluxo principal
+
+```python
+from disscube.client import CubeClient
+from disscube.derivation import Derivation
+
+cube = CubeClient(catalog="catalog.db", store="./data/")
+
+d = Derivation(
+    target="forest_pct",
+    source_id="mapbiomas_2020",
+    operator="percentage",
+    class_code=3,
+    valid_from="2020",
+    valid_until="2020",
+)
+cube.derive_declarative(d, grid_id="AC/5km")
+
+da = cube.load("forest_pct", grid_id="AC/5km")
+```
+
+## Navegação
+
+- [**Arquitetura**](architecture/overview.md) — modelo conceitual, pipeline e hash de reprodutibilidade
+- [**Operadores**](architecture/operators.md) — sistema de plugins, operadores disponíveis, como adicionar novos
+- [**Pipeline**](architecture/pipeline.md) — estágios detalhados: Normalizer → GridAligner → Aggregator → Writer
+- [**Catálogo**](architecture/catalog.md) — SQLite, schema, hash e séries temporais
+- [**Grades**](guides/grids.md) — snap ao mesh nacional, grades locais, relações espaciais
+- [**Guia BDC**](guides/bdc.md) — integração com Brazil Data Cube e processamento por tiles
