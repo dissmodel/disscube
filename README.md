@@ -184,6 +184,28 @@ class WeightedMeanOperator(Operator):
 
 O operador é registrado automaticamente e aceito em `Derivation` / `SpatialDerivation` sem nenhuma outra mudança.
 
+## Limitações conhecidas
+
+As limitações abaixo são decisões de escopo da versão atual, não bugs. Estão documentadas para que usuários e revisores entendam o que está implementado versus o que está planejado.
+
+**Processamento em memória, single-tile**
+Cada chamada a `derive()` carrega o dado completo de um tile em memória. Não há processamento lazy (Dask) nem distribuído. Para grades de escala continental (ex: `BR/1km`), use o loop de tiles — cada tile é processado e salvo independentemente.
+
+**Agregação vetorial por rasterização (não área-ponderada)**
+Operadores sobre fontes vetoriais (`majority`, `percentage`, `attribute`, `presence`, `minority`) convertem geometrias em raster antes de agregar pixels. A fração de cobertura de cada célula é estimada por contagem de pixels, não por cálculo de área de interseção. Para cobertura proporcional mais precisa, use uma fonte raster em resolução substancialmente maior que a célula-alvo.
+
+**Desambiguação de tiles em `load()`**
+`CubeClient.load(name)` sem `tile_id` retorna silenciosamente o primeiro resultado quando múltiplos tiles da mesma variável existem na mesma grade. Erro explícito ou mosaico automático estão planejados. **Especifique sempre `tile_id` em workloads multi-tile.**
+
+**`SpatialRelation` não atua no pipeline**
+O modelo `SpatialRelation` é persistido no catálogo e incluído no `spec_hash` (mudá-lo invalida o cache), mas nenhum estágio do pipeline usa as relações durante a derivação. A integração com estratégias hierárquicas de grades está reservada para versão futura.
+
+**`purity_threshold` reservado**
+O campo `purity_threshold` em `Derivation` é incluído no `spec_hash`, mas não é aplicado à saída — a máscara por pureza não está implementada. Definir `purity_threshold` muda o cache key sem mudar o resultado.
+
+**Sem integração STAC**
+Os campos `valid_from`/`valid_until` e `bbox` em `Derivation` seguem a convenção de nomenclatura STAC, mas nenhuma lógica de cliente, catálogo ou exportação STAC está implementada neste módulo.
+
 ## Licença
 
 Parte do ecossistema DisSModel. Ver `LICENSE` para detalhes.

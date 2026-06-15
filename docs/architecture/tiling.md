@@ -8,11 +8,11 @@ Uma **Master Grid** define a resolução e o CRS para todo o país. **Tiles** s�
 
 ```mermaid
 graph TD
-    MG[Master Grid: BDC/100m] --> T1[Tile 001]
+    MG[Master Grid: BR/5km] --> T1[Tile 001]
     MG --> T2[Tile 002]
     MG --> TN[Tile N…]
-    T1 --> Z1[zarr: .../001/{hash}/var.zarr]
-    T2 --> Z2[zarr: .../002/{hash}/var.zarr]
+    T1 --> Z1[zarr: .../BR_5km/001/{hash}/var.zarr]
+    T2 --> Z2[zarr: .../BR_5km/002/{hash}/var.zarr]
 ```
 
 ## Como o CubeClient usa tiles
@@ -57,19 +57,26 @@ for tile_id in tile_ids:
     cube.derive(derivation, tile_id=tile_id)
 ```
 
+> **Nota:** o `bdc_importer` registra tiles BDC como `SpatialSource` com IDs no formato
+> `BDC_SM_<tile>`. A grade de simulação permanece `BR/5km` ou `BR/1km` — os tiles BDC
+> definem apenas o bbox do recorte a processar.
+
 Cada iteração é independente. Workers paralelos podem processar tiles diferentes sem conflitos (caminhos Zarr únicos por tile + spec_hash).
 
 ## Carregar dados tileados
 
 ```python
-# Carga de um tile específico
+# Carga de um tile específico (tile_id sempre funciona)
 da = cube.load("dist_road", tile_id="009002")
 
-# Carga por grade (mosaico de todos os tiles com mesmo nome e spec_hash)
-da = cube.load("dist_road", grid_id="BDC_SM")
+# Carga por grade — funciona quando há apenas um tile
+da = cube.load("dist_road", grid_id="BR/5km")
 ```
 
-`CubeClient.load()` detecta tiles automaticamente ao buscar por `variable_name` + `grid_id`. Se houver múltiplos tiles, empilha as fatias. Para variáveis temporais com múltiplos tiles, ordena por tempo.
+> **Limitação atual:** `load()` sem `tile_id` retorna silenciosamente o primeiro resultado
+> quando múltiplos tiles da mesma variável existem na mesma grade. A desambiguação
+> automática (mosaico ou erro explícito) está planejada mas não implementada.
+> Especifique sempre `tile_id` em workloads multi-tile.
 
 ## Vantagens
 
