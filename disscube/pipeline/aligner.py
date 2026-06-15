@@ -25,6 +25,7 @@ from __future__ import annotations
 import logging
 
 import rioxarray  # noqa: F401 — registers the .rio accessor
+import numpy as np
 import xarray as xr
 import geopandas as gpd
 from pyproj import CRS as ProjCRS
@@ -76,7 +77,7 @@ class GridAligner(PipelineStage):
         grid: GridSpec,
         variables: list[Variable],
         band_map: dict[str, int],
-    ) -> xr.Dataset:
+    ) -> dict[str, xr.DataArray]:
         """
         Reproject and resample the source raster for each variable.
 
@@ -97,7 +98,11 @@ class GridAligner(PipelineStage):
             Optional ``{variable_name: 1-based band index}`` from the source.
         """
         ds_src = rioxarray.open_rasterio(url)
-        result = xr.Dataset(coords={"y": grid.ys, "x": grid.xs})
+        # Map of variable name -> aligned DataArray. A plain dict (not a
+        # Dataset) is used because fine-aligned categorical arrays have a
+        # different shape than the target grid; putting them in a Dataset
+        # keyed on grid coords would trigger coordinate realignment to NaN.
+        result: dict[str, xr.DataArray] = {}
 
         for i, var in enumerate(variables):
             # ── Band selection ─────────────────────────────────────────
@@ -124,6 +129,21 @@ class GridAligner(PipelineStage):
 
             # ── Per-operator resampling method ─────────────────────────
             op_cls = OPERATOR_REGISTRY.get(var.operator)
+            needs_fine = bool(getattr(op_cls, "needs_fine_alignment", False))
+
+            if needs_fine:
+                # Categorical operators must see sub-cell class composition.
+                # Reproject with NEAREST (never average a class code) onto a
+                # fine grid that shares the target grid origin, at a resolution
+                # that is an integer sub-multiple of the target cell size.
+                aligned = self._align_fine(band, grid)
+                result[var.name] = aligned
+                log.debug(
+                    "fine-aligned '%s' via '%s' (nearest, fine shape=%s -> target=%s)",
+                    var.name, var.operator, aligned.rio.shape, (grid.rows, grid.cols),
+                )
+                continue
+
             resampling: Resampling = (
                 op_cls.resampling() if op_cls else Resampling.nearest
             )
@@ -153,3 +173,75 @@ class GridAligner(PipelineStage):
             )
 
         return result
+
+    # ------------------------------------------------------------------
+    # Fine alignment for categorical operators
+    # ------------------------------------------------------------------
+
+    def _align_fine(self, band: xr.DataArray, grid: GridSpec) -> xr.DataArray:
+        """
+        Reproject ``band`` onto a fine grid snapped to the target grid origin.
+
+        The fine resolution is the largest integer sub-multiple of the target
+        cell size that is not coarser than the source resolution, so each
+        target cell maps onto a whole number of fine pixels along each axis.
+        Resampling is NEAREST to preserve class codes. The source nodata is
+        carried on the result as ``_disscube_nodata`` for the operator.
+
+        Parameters
+        ----------
+        band : xr.DataArray
+            Single-band source (already band-selected).
+        grid : GridSpec
+            Target grid.
+
+        Returns
+        -------
+        xr.DataArray
+            Fine, origin-snapped array (dims "y","x"), with nodata recorded
+            in ``attrs["_disscube_nodata"]``.
+        """
+        from affine import Affine
+
+        # Estimate source resolution in target CRS units by reprojecting first
+        # to the target CRS at native resolution, then deriving a sub-multiple.
+        src = band.rio.reproject(grid.crs, resampling=Resampling.nearest)
+        try:
+            src_res = abs(float(src.rio.resolution()[0]))
+        except Exception:
+            src_res = grid.resolution
+
+        target_res = grid.resolution
+        if src_res <= 0 or src_res >= target_res:
+            # Source no finer than target: one fine pixel per target cell.
+            factor = 1
+        else:
+            # Largest integer factor whose fine res (target/factor) is >= src_res.
+            factor = max(1, int(np.floor(target_res / src_res)))
+
+        fine_res = target_res / factor
+        fine_rows = grid.rows * factor
+        fine_cols = grid.cols * factor
+
+        # Fine transform shares the target grid origin (north-up).
+        fine_transform = (
+            Affine.translation(grid.bbox[0], grid.bbox[3])
+            * Affine.scale(fine_res, -fine_res)
+        )
+
+        nodata = None
+        try:
+            nodata = band.rio.nodata
+        except Exception:
+            nodata = None
+
+        aligned = band.rio.reproject(
+            grid.crs,
+            shape=(fine_rows, fine_cols),
+            transform=fine_transform,
+            resampling=Resampling.nearest,
+        )
+        aligned = aligned.transpose("y", "x") if "band" not in aligned.dims else aligned.isel(band=0).transpose("y", "x")
+        if nodata is not None:
+            aligned.attrs["_disscube_nodata"] = nodata
+        return aligned

@@ -54,6 +54,16 @@ class Operator:
     requires_class_code: ClassVar[bool] = False
     _resampling: ClassVar[Resampling] = Resampling.nearest
 
+    # When True, GridAligner must NOT pre-aggregate the band with this
+    # operator's ``resampling()``.  Instead it provides a fine-resolution
+    # array reprojected with ``Resampling.nearest`` whose origin is snapped
+    # to the target grid, at a resolution that is an integer sub-multiple of
+    # the target cell size.  The operator's ``compute()`` then performs the
+    # window aggregation into the target grid.  Used by categorical operators
+    # (percentage / majority / minority) that must see sub-cell class
+    # composition rather than a pre-collapsed mode.
+    needs_fine_alignment: ClassVar[bool] = False
+
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
         if hasattr(cls, "name") and isinstance(cls.name, str):

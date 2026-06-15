@@ -81,14 +81,26 @@ class Aggregator(PipelineStage):
                     f"Available: {available}"
                 )
 
-            # For raster sources GridAligner returns a Dataset keyed by
-            # variable name; for vector sources it returns a GeoDataFrame.
-            if isinstance(source_data, xr.Dataset):
+            # For raster sources GridAligner returns a dict keyed by variable
+            # name (DataArrays may be at target-grid resolution for continuous
+            # operators, or at a fine resolution for categorical ones). For
+            # vector sources it returns a single GeoDataFrame.
+            if isinstance(source_data, dict):
+                var_data = source_data[var.name]
+            elif isinstance(source_data, xr.Dataset):
                 var_data = source_data[var.name]
             else:
                 var_data = source_data
 
             result: xr.DataArray = op_cls().compute(var_data, var, grid)
+
+            # Purity metrics (coverage_purity / dominance_purity) produced by
+            # categorical operators are kept as COORDINATES on the variable's
+            # DataArray — not as separate data variables — so that the
+            # VariableWriter persists them inside the variable's own Zarr and
+            # does NOT register them as standalone DerivedVariables in the
+            # catalog. They travel with the variable and never pollute the
+            # product catalog.
             final_ds[var.name] = result
 
             if spatial_ref is not None:

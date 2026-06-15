@@ -78,10 +78,14 @@ def test_per_variable_resampling_produces_correct_names(tmp_path):
     GridAligner().execute(ctx)
     ds = ctx.data
 
-    assert isinstance(ds, xr.Dataset)
-    assert "uso" in ds.data_vars
-    assert "alt" in ds.data_vars
-    assert ds["uso"].shape == (10, 10)
+    # GridAligner now returns a dict keyed by variable name. Continuous
+    # operators (mean) are aligned to the target grid; categorical ones
+    # (majority) are returned at a fine, origin-snapped resolution and
+    # reduced later by the operator, so only the continuous one is asserted
+    # to match the target shape here.
+    assert isinstance(ds, dict)
+    assert "uso" in ds
+    assert "alt" in ds
     assert ds["alt"].shape == (10, 10)
 
 
