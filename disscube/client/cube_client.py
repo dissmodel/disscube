@@ -166,6 +166,14 @@ class CubeClient:
                     "Please specify grid_id."
                 )
 
+        if tile_id is None and len(matches) > 1:
+            candidate_tiles = sorted(set(m.tile_id for m in matches if m.tile_id))
+            if len(candidate_tiles) > 1:
+                raise ValueError(
+                    f"Variable '{variable_id}' exists across multiple tiles: {candidate_tiles}. "
+                    "Pass tile_id=<tile> to load a specific tile."
+                )
+
         # Separate temporal from static matches, skipping stale catalog entries
         # whose files no longer exist on disk (catalog can accumulate orphans when
         # a source_id or other spec field changes between runs).
