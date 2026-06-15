@@ -43,6 +43,10 @@ class JsonCatalogStore:
         self._data["derived"][derived.id] = derived.model_dump()
         self._save()
 
+    def delete_derived(self, derived_id: str) -> None:
+        self._data["derived"].pop(derived_id, None)
+        self._save()
+
     def search_derived_variables(self, grid_id: str | None = None, role: str | None = None, tile_id: str | None = None) -> List[DerivedVariable]:
         results = []
         for d in self._data["derived"].values():

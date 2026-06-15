@@ -92,6 +92,10 @@ class SqliteCatalogStore:
                 (derived.id, derived.grid_id, derived.spec_hash, derived.tile_id, derived.role, derived.model_dump_json())
             )
 
+    def delete_derived(self, derived_id: str) -> None:
+        with self._get_connection() as conn:
+            conn.execute("DELETE FROM derived WHERE id = ?", (derived_id,))
+
     def search_derived_variables(self, grid_id: str | None = None, role: str | None = None, tile_id: str | None = None) -> List[DerivedVariable]:
         query = "SELECT data FROM derived WHERE 1=1"
         params = []

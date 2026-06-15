@@ -46,7 +46,7 @@ class VariableWriter(PipelineStage):
             full_path = self.storage.get_full_path(relative_path)
             
             # Save as dataset to preserve all coordinates (including spatial_ref)
-            da.to_dataset(name=var_name).to_zarr(full_path, mode="w")
+            da.to_dataset(name=var_name).to_zarr(full_path, mode="w", consolidated=False)
             
             # Calculate content hash (SHA-256) of the Zarr directory
             content_hash = self._calculate_dir_hash(full_path)

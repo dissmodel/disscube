@@ -46,7 +46,7 @@ def _ones_da(grid):
 
 
 def _write_zarr(da, path, name="v"):
-    da.to_dataset(name=name).to_zarr(path, mode="w")
+    da.to_dataset(name=name).to_zarr(path, mode="w", consolidated=False)
     return str(path)
 
 

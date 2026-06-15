@@ -117,6 +117,24 @@ class CubeClient:
         """
         return self.derive(derivation.to_spatial_derivation(grid_id), tile_id=tile_id)
 
+    def purge_stale(self) -> int:
+        """
+        Remove catalog entries whose Zarr files no longer exist on disk.
+
+        Returns the number of entries removed. Safe to call at any time;
+        entries with valid files are untouched.
+        """
+        all_derived = self.catalog.search_derived_variables()
+        removed = 0
+        for d in all_derived:
+            if not os.path.exists(d.asset_url):
+                self.catalog.delete_derived(d.id)
+                log.debug("Purged stale catalog entry: %s", d.asset_url)
+                removed += 1
+        if removed:
+            log.info("purge_stale: removed %d stale catalog entries", removed)
+        return removed
+
     def load(
         self,
         variable_id: str,
@@ -148,9 +166,17 @@ class CubeClient:
                     "Please specify grid_id."
                 )
 
-        # Separate temporal from static matches
-        temporal = [d for d in matches if d.times]
-        static   = [d for d in matches if not d.times]
+        # Separate temporal from static matches, skipping stale catalog entries
+        # whose files no longer exist on disk (catalog can accumulate orphans when
+        # a source_id or other spec field changes between runs).
+        def _exists(d: DerivedVariable) -> bool:
+            ok = os.path.exists(d.asset_url)
+            if not ok:
+                log.debug("Stale catalog entry skipped (file missing): %s", d.asset_url)
+            return ok
+
+        temporal = [d for d in matches if d.times and _exists(d)]
+        static   = [d for d in matches if not d.times and _exists(d)]
 
         if temporal:
             # Stack temporal slices along time axis sorted by first time value
@@ -158,14 +184,19 @@ class CubeClient:
             slices = []
             time_coords = []
             for d in temporal_sorted:
-                da = xr.open_zarr(d.asset_url)[d.name]
+                da = xr.open_zarr(d.asset_url, consolidated=False)[d.name]
                 slices.append(da)
                 time_coords.extend(d.times)
             return xr.concat(slices, dim=xr.DataArray(time_coords, dims="time"))
 
         # Static — original behaviour
+        if not static:
+            msg = f"Derived variable not found on disk: {variable_id}"
+            if grid_id:
+                msg += f" on grid {grid_id}"
+            raise ValueError(msg)
         derived = static[0]
-        return xr.open_zarr(derived.asset_url)[derived.name]
+        return xr.open_zarr(derived.asset_url, consolidated=False)[derived.name]
 
     def to_lucc_data(
         self,

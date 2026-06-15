@@ -130,8 +130,9 @@ class TestBDCMasterGrids(unittest.TestCase):
     # load() with tile_id
     # ------------------------------------------------------------------
 
+    @patch('disscube.client.cube_client.os.path.exists', return_value=True)
     @patch('xarray.open_zarr')
-    def test_load_with_explicit_tile_id_filters_correctly(self, mock_open_zarr):
+    def test_load_with_explicit_tile_id_filters_correctly(self, mock_open_zarr, mock_exists):
         """load(name, tile_id='001') returns only the matching tile."""
         from disscube.models import DerivedVariable
         import xarray as xr
@@ -156,10 +157,12 @@ class TestBDCMasterGrids(unittest.TestCase):
 
         res = self.cube.load("var1", tile_id="001")
         self.assertEqual(res, mock_da)
-        mock_open_zarr.assert_called_with("path/001.zarr")
+        mock_open_zarr.assert_called_with("path/001.zarr", consolidated=False)
 
+    @patch('disscube.client.cube_client.os.path.exists', return_value=True)
+    @patch('xarray.open_zarr')
     @unittest.expectedFailure
-    def test_load_without_tile_id_raises_for_ambiguous_tiles(self):
+    def test_load_without_tile_id_raises_for_ambiguous_tiles(self, mock_open_zarr, mock_exists):
         """
         PLANNED (not yet implemented): load(name) without tile_id should raise
         ValueError when multiple tiles of the same variable exist on the same grid.
