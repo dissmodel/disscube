@@ -67,10 +67,6 @@ class Aggregator(PipelineStage):
         source_data = ctx.data
 
         final_ds = xr.Dataset(coords={"y": grid.ys, "x": grid.xs})
-        named_wkt = _crs_to_named_wkt(grid.crs)
-        final_ds.rio.write_crs(named_wkt, inplace=True)
-        final_ds.rio.write_transform(grid.transform, inplace=True)
-        spatial_ref = final_ds.coords.get("spatial_ref")
 
         for var in ctx.derivation.variables:
             op_cls = OPERATOR_REGISTRY.get(var.operator)
@@ -103,8 +99,13 @@ class Aggregator(PipelineStage):
             # product catalog.
             final_ds[var.name] = result
 
-            if spatial_ref is not None:
-                final_ds = final_ds.assign_coords({"spatial_ref": spatial_ref})
+        # Write CRS and transform AFTER all variables are present.
+        # rioxarray.write_crs() sets grid_mapping="spatial_ref" on every existing
+        # data variable — calling it before the loop would miss them all, causing
+        # QGIS and other CF-compliant readers to not detect the projection.
+        named_wkt = _crs_to_named_wkt(grid.crs)
+        final_ds.rio.write_crs(named_wkt, inplace=True)
+        final_ds.rio.write_transform(grid.transform, inplace=True)
 
         ctx.data = final_ds
         return ctx
