@@ -1,10 +1,13 @@
 """
-examples/case_studies/brmangue/02_simulate.py
+examples/case_studies/maranhao/03_brmangue_simulate.py
 
-BR-MANGUE case study — Executes the BrmangueRasterExecutor simulation using derived variables.
+BR-MANGUE — executa o BrmangueRasterExecutor com as variáveis derivadas.
+
+Pré-requisito:
+  - python examples/case_studies/maranhao/02_brmangue_derive.py
 
 Usage:
-    python examples/case_studies/brmangue/02_simulate.py
+    python examples/case_studies/maranhao/03_brmangue_simulate.py
 """
 
 from disscube.client import CubeClient
@@ -23,16 +26,14 @@ VARIABLES = ["uso", "alt", "solo"]
 
 cube = CubeClient(catalog="catalog.db", store="./data/")
 
-# 1. Load derived variables
 print(f"\n[load] {VARIABLES} @ {GRID_ID}")
 backend = cube.to_lucc_data(VARIABLES, grid_id=GRID_ID)
 print(f"  bands: {backend.band_names()}")
 
-# 2. Run simulation
 if BrmangueRasterExecutor and ExperimentRecord:
     print("\n--- Running BrmangueRasterExecutor ---")
     source = cube.catalog.get_spatial_source(SOURCE_ID)
-    
+
     record = ExperimentRecord(
         experiment_id="brmangue_cube_integration",
         parameters={"end_time": 5, "interactive": False, "bands": ["uso"]},
@@ -47,4 +48,4 @@ if BrmangueRasterExecutor and ExperimentRecord:
 
     print(f"Simulation done. Output: {record.output_path}")
 else:
-    print("\nBrmangueRasterExecutor not available — simulation skipped.")
+    print("\nBrmangueRasterExecutor não disponível — simulation skipped.")

@@ -1,8 +1,8 @@
 """
-examples/case_studies/ilha_maranhao/01_derive.py
+examples/case_studies/maranhao/01_mapbiomas_temporal.py
 
-Deriva variáveis para a Ilha do Maranhão usando MapBiomas:
-  - uso (majority, temporal 2010-2022)
+Deriva série temporal MapBiomas para a Ilha do Maranhão (100 m):
+  - uso       (majority, temporal 2010-2022)
   - dist_sedes (min_distance, estática)
 
 Pré-requisitos:
@@ -11,7 +11,7 @@ Pré-requisitos:
   - Arquivos data/raw/ilha_maranhao_mapbiomas_{2010,2022}.tif presentes
 
 Usage:
-    python examples/case_studies/ilha_maranhao/01_derive.py
+    python examples/case_studies/maranhao/01_mapbiomas_temporal.py
 """
 
 from disscube.client import CubeClient

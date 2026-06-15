@@ -1,5 +1,5 @@
 """
-examples/setup/03_import_bdc_tiles.py
+tools/import_bdc_tiles.py
 
 Importa os tiles BDC (SM / MD / LG) como SpatialSources no catálogo.
 Operação one-time; pode demorar alguns minutos dependendo do tamanho dos
@@ -9,7 +9,7 @@ Pré-requisito:
   - python examples/setup/01_init_catalog.py
 
 Usage:
-    python examples/setup/03_import_bdc_tiles.py
+    python tools/import_bdc_tiles.py
 """
 
 from disscube.client import CubeClient
