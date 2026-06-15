@@ -161,16 +161,8 @@ class TestBDCMasterGrids(unittest.TestCase):
 
     @patch('disscube.client.cube_client.os.path.exists', return_value=True)
     @patch('xarray.open_zarr')
-    @unittest.expectedFailure
     def test_load_without_tile_id_raises_for_ambiguous_tiles(self, mock_open_zarr, mock_exists):
-        """
-        PLANNED (not yet implemented): load(name) without tile_id should raise
-        ValueError when multiple tiles of the same variable exist on the same grid.
-
-        Currently load() silently returns the first match. This test is marked
-        @expectedFailure to document the planned behavior as a regression guard —
-        when the feature is implemented, remove the decorator and the test will pass.
-        """
+        """load(name) without tile_id raises ValueError when multiple tiles exist on the same grid."""
         from disscube.models import DerivedVariable
 
         d1 = DerivedVariable(

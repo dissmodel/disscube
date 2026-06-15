@@ -9,7 +9,7 @@ O Brazil Data Cube (BDC) particionam o Brasil em tiles hierárquicos. DisSCube r
 
 ## Registrar grades e tiles BDC
 
-O utilitário `bdc_importer` cria as master grids e registra cada tile como `SpatialSource`:
+O utilitário `bdc_importer` indexa as master grids e registra cada tile como `SpatialSource` no catálogo:
 
 ```python
 from disscube.utils.bdc_importer import import_bdc_grids
@@ -23,6 +23,9 @@ import_bdc_grids(
 ```
 
 Isso registra as master grids e cada tile como `SpatialSource` com `bbox` preenchido.
+
+!!! warning "Ingestão de dados STAC — planejada"
+    `bdc_importer` indexa a grade BDC e os tiles (geometria e metadados), mas **não realiza ingestão de dados via STAC**. Os `SpatialSource` registrados têm `asset_url` como placeholder (`"planned"`) e não são diretamente carregáveis como dados raster. A integração com o catálogo STAC do BDC está planejada e ainda não implementada. Para usar dados BDC reais, forneça os arquivos localmente via um `SpatialSource` com `asset_url` apontando para o arquivo correto.
 
 ## Derivação por tile
 
@@ -60,7 +63,7 @@ da = cube.load("slope", grid_id="BR/5km")
 ```
 
 !!! warning "Carga multi-tile"
-    `load()` sem `tile_id` retorna silenciosamente o primeiro resultado quando múltiplos tiles da mesma variável existem na mesma grade. Mosaico automático não está implementado. **Sempre especifique `tile_id` em workloads multi-tile.**
+    `load()` sem `tile_id` levanta `ValueError` quando múltiplos tiles da mesma variável existem na mesma grade. Mosaico automático não está implementado. **Sempre especifique `tile_id` em workloads multi-tile.**
 
 ## Grade 100m nacional
 
